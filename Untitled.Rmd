@@ -28,6 +28,8 @@ library(lmtest)
 library(tseries)
 library(astsa)
 library(FinTS)
+library(Metrics)
+library(ggplot2)
 ```
 
 # Data Loading and Preparation
@@ -718,26 +720,88 @@ While the Shapiro-Wilk test suggests a slight deviation from normality, the K-S 
 
 # Future Observations Forecast
 
-# POR FAZER
+To generate forecasts for future electricity consumption, the two best-performing models from the analysis will be used:
 
-# ESTOU AQUI DPS DE FAZER O MELHOR ARIMA
+```{.r}
+fit_arima   # SARIMA(1,1,1)(1,1,1)[12]
+fit_stlm    # STLM(ARIMA)
+```
+
+Forecast accuracy and behavior will be compared visually and numerically using the held-out test set.
+
+## SARIMA(1,1,1)(1,1,1)[12] 
+
+```{r}
+# forecast
+arima_forecast <- forecast(fit_arima, h = length(ts_test))
+
+# evaluation metrics
+forecast::accuracy(arima_forecast, ts_test)
+
+# plot the forecast (train+test vs forecast)
+autoplot(ts_data, series = "Actual") +
+  autolayer(arima_forecast, series = "Forecast", PI = FALSE) +
+  labs(title = "Forecast vs Full Series - SARIMA(1,1,1)(1,1,1)[12]",
+       x = "Time (Monthly)",
+       y = "Electricity Consumption (GWh)") +
+  scale_colour_manual(values = c("Actual" = "black", "Forecast" = "blue"))
+
+# plot the forecast (test vs forecast)
+autoplot(ts_test, series = "Test") +
+  autolayer(arima_forecast, series = "Forecast", PI = FALSE) +
+  labs(title = "Forecast vs Test Set - SARIMA(1,1,1)(1,1,1)[12]",
+       x = "Time (Monthly)",
+       y = "Electricity Consumption (GWh)") +
+  scale_colour_manual(values = c("Test" = "black", "Forecast" = "blue"))
+```
+
+## STLM(ARIMA)
+
+```{r}
+# forecast
+stlm_forecast <- forecast(fit_stlm, h = length(ts_test))
+
+# evaluation metrics
+forecast::accuracy(stlm_forecast, ts_test)
+
+# plot the forecast (train+test vs forecast)
+autoplot(ts_data, series = "Actual") +
+  autolayer(stlm_forecast, series = "Forecast", PI = FALSE) +
+  labs(title = "Forecast vs Full Series - STLM(ARIMA)",
+       x = "Time (Monthly)",
+       y = "Electricity Consumption (GWh)") +
+  scale_colour_manual(values = c("Actual" = "black", "Forecast" = "blue"))
+
+# plot the forecast (test vs forecast)
+autoplot(ts_test, series = "Test") +
+  autolayer(stlm_forecast, series = "Forecast", PI = FALSE) +
+  labs(title = "Forecast vs Test Set - STLM(ARIMA)",
+       x = "Time (Monthly)",
+       y = "Electricity Consumption (GWh)") +
+  scale_colour_manual(values = c("Test" = "black", "Forecast" = "blue"))
+```
+
+# Results
+
+# POR FAZER
 
 # ALLEZ ALLEZ FORECAST MISSING
 
-models to be used
+# AUQI AUIQ AQUIUAQIUAIQUIAUQIUAIUQAQ
 
-```{.r}
-fit_arima
-fit_stlm
+Accuracy of the forecasts should be
+compared. (lets also use conf inter (see code below))
+
+Discussion should include the model choice.
+
+```{r}
+# Example for 95% PI
+inside_95 <- ts_test >= arima_forecast$lower[,2] & ts_test <= arima_forecast$upper[,2]
+coverage_95 <- mean(inside_95)
+
+width_95 <- arima_forecast$upper[,2] - arima_forecast$lower[,2]
+mean_width_95 <- mean(width_95)
 ```
-
-
-
-
-
-
-
-
 
 
 
