@@ -500,24 +500,15 @@ cat("The residuals have mean", mean(residuals(sarima3)), "and variance", var(res
 qqnorm(residuals(sarima3)); qqline(residuals(sarima3))
 ```
 
-Since no model fully satisfied the diagnostic criteria for a well-specified model—namely, uncorrelated, homoscedastic, and normally distributed residuals—further tuning is necessary.
+Since no model fully satisfied the diagnostic criteria for a well-specified model (namely, uncorrelated, homoscedastic, and normally distributed residuals), further tuning is necessary.
 
-# AQUI AUQI AUQI AUQIA UJQIAUQ AUIQUAIQUAIUQIAUQIUAIQ AUQIUA QUIAUQIAUQ
-
-# POR ENCONTRAR O MELHOR ARIMA  !!!!!!!!!!!! POR ECONTRAR
-
-# POR MELHORAR ESTA PARTE A ESCRITA E ISSO
-
-# AQUI VEM SÓ O MELHOR ARIMA E ESCRITA DELE E PQ É BOM E ISSO
-
+After extensive testing of alternative SARIMA specifications and parameter adjustments, this was the best-performing configuration identified based on diagnostic criteria and overall model adequacy.
 
 ```{r}
 fit_arima <- forecast::Arima(ts_train,
                            order = c(1,1,1),
                            seasonal = c(1,1,1))
-```
 
-```{r}
 summary(fit_arima)
 ```
 
@@ -541,16 +532,69 @@ qqnorm(residuals(fit_arima)); qqline(residuals(fit_arima))
 ```
 
 ```{r}
-# Shapiro-Wilk test (recommended only for n ≤ 5000)
+# Shapiro-Wilk test
 shapiro.test(residuals(fit_arima))
 
-# Kolmogorov–Smirnov test against normal distribution
+# Kolmogorov–Smirnov test
 ks.test(residuals(fit_arima), "pnorm", mean=mean(residuals(fit_arima)), sd=sd(residuals(fit_arima)))
 ```
 
+Even though the `sar1` coefficient is individually insignificant and `ar1` shows correlation with `ma1`, both contribute meaningfully to whitening the residuals. Their inclusion reduces autocorrelation not accounted for by other components. In time series modeling, residual diagnostics take precedence over individual parameter significance, and retaining such terms is justified when they improve the overall model adequacy.
+
+The residual diagnostics for the model show reasonably good behavior:
+
+- The residuals appear centered with no visible trend or structural shift.
+
+- The ACF plot shows no significant autocorrelation at most lags.
+
+- The histogram indicates approximate symmetry and bell-shaped distribution.
+
+- The Ljung-Box test result is:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{No autocorrelation in residuals} \\
+\text{H}_1\!:& \quad \text{Residuals are autocorrelated}
+\end{aligned}
+$$
 
 
+p-value is 0.0513, slightly above the 5% significance level, indicating marginal evidence against the null hypothesis. While not entirely conclusive, this suggests that the residuals are likely uncorrelated, or at least that any remaining autocorrelation is weak.
 
+Normality of the residuals was evaluated using both the Shapiro-Wilk and Kolmogorov-Smirnov tests, along with visual inspection via the Q-Q plot.
+
+- Shapiro-Wilk test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals are normally distributed} \\
+\text{H}_1\!:& \quad \text{Residuals deviate from normality}
+\end{aligned}
+$$
+
+p-value = 0.005097: Rej. H0: Some evidence of non-normality.
+
+- Kolmogorov-Smirnov test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals follow the normal distribution} \\
+\text{H}_1\!:& \quad \text{Residuals do not follow the normal distribution}
+\end{aligned}
+$$
+
+p-value = 0.1969: Fail to reject H0: no significant evidence of non-normality.
+
+This difference arises because the Shapiro-Wilk test is more robust against non-normality, particularly for skewed distributions and in small samples. The Kolmogorov-Smirnov test, on the other hand, is more conservative and may fail to reject the null hypothesis for non-normal data, especially in small samples. 
+
+- Q-Q plot
+
+Shows tail deviations but an overall "acceptable" alignment with the theoretical normal distribution.
+
+While the Shapiro-Wilk test suggests a deviation from normality, the K-S test and graphical analysis "support" the assumption of approximate normality.
+
+
+The SARIMA(1,1,1)(1,1,1)[12] model produces residuals that are close enough to white noise, with weak autocorrelation and only mild deviations from normality. Although not perfect, the model satisfies most diagnostic criteria to a reasonable extent. In the absence of clearly superior alternatives, this model may be considered adequate for forecasting purposes.
 
 ## GARCH
 
@@ -683,12 +727,9 @@ While the Shapiro-Wilk test suggests a slight deviation from normality, the K-S 
 models to be used
 
 ```{.r}
-fit_stlm
 fit_arima
+fit_stlm
 ```
-
-
-
 
 
 
