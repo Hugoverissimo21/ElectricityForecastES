@@ -1,0 +1,106 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{subfigure,graphicx}
+\usepackage{multicol}
+\usepackage{stfloats}
+\usepackage[portuguese]{babel}
+%\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage[protrusion=true,expansion=true]{microtype}
+\usepackage{amsfonts,latexsym,amssymb,euscript,xr,amsthm}
+
+\begin{document}
+
+\title{TITULO}
+
+\author{Hugo Veríssimo. hugoverissimo@ua.pt, 124348.}
+
+\markboth{Mineração de Dados em Larga Escala. 5 de Março de 2025. MUDAR MUDAR MUDAR MUDAR MUDAR MUDAR MUDAR}{} %MUDAR % MUDAR
+
+\maketitle
+
+\begin{abstract}
+abstrato
+\end{abstract}
+
+\IEEEpeerreviewmaketitle
+
+\section{Introdução}
+
+O presente trabalho tem como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, utilizando dados oficiais do Eurostat \cite{eurostat_nrg_cb_em}. A análise de séries temporais neste contexto reveste-se de particular importância, dado o papel estratégico da energia elétrica na economia e na definição de políticas públicas. A capacidade de antecipar padrões de consumo permite uma melhor gestão de recursos, planeamento da produção e tomada de decisões informadas por parte dos agentes do setor energético.
+
+baseia-se em ... ("metodologia e coisas usadas")
+
+CHATGPT:
+
+A metodologia seguida baseia-se em técnicas clássicas de modelação de séries temporais. Inicia-se com uma análise exploratória da série, onde se investigam tendências, sazonalidade e possíveis irregularidades. A estacionariedade é avaliada tanto de forma gráfica como através de testes formais (ADF e KPSS).
+
+Com a série estacionária, procede-se à estimação de vários modelos SARIMA, que incorporam componentes sazonais e não sazonais. A seleção do modelo baseia-se em critérios de informação (AICc), ajustamento visual e diagnóstico dos resíduos. O objetivo final é identificar um modelo que capture adequadamente a estrutura temporal dos dados e permita previsões robustas e fiáveis.
+
+
+
+\section{Data and exploratory analysis/data transformation}
+
+a
+
+\subsection{c}
+
+a
+
+\begin{table}[H]
+\centering
+\caption{OLD OLD OLD Comparação da Acurácia Entre os Modelos Desenvolvidos e os Modelos do Artigo}
+\label{accuracies}
+\begin{tabular}{l|cc|cc|c}
+\toprule
+ & \multicolumn{2}{c|}{Train Set} & \multicolumn{2}{c|}{Test Set} & \\
+\textbf{Classificador} & \textbf{Full} & \textbf{Top 15} & \textbf{Full} & \textbf{Top 15} & \textbf{Artigo} \\
+\midrule
+Random Forest & 99.3 & 98.7 & 99.7 & 98.9 & 98.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{ Model proposals}
+
+ (SARIMA type and/or ETS model and/or GARCH model):
+
+Box  Jenkins methodology if SARIMA models; this includes model identification,
+parameter estimation, diagnostic evaluation (parameters correlation,
+parameters significance, residual analysis).
+
+\subsection{SARIMA}
+
+b
+
+\section{Future observations forecast}
+
+Includes the analysis of its accuracy, confidence intervals (if possible), use of
+bootstrap methodology (if necessary). Accuracy of the forecasts should be
+compared.
+
+\section{Results, discussion/conclusions:}
+
+Discussion should include the model choice
+
+\section{Conclusão}
+
+conc
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\appendices
+\section{Título do Apêndice A}
+Auxiliary/not so important results are included in the Appendix.
+
+\section{Título do Apêndice B}
+Auxiliary/not so important results are included in the Appendix.
+
+\appendix
+\section{OU se for só 1: Título do Apêndice}
+Auxiliary/not so important results are included in the Appendix.
+
+\end{document}

@@ -1,0 +1,645 @@
+---
+title: "ST01"
+author: "Hugo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Introduction
+
+This project presents a time series analysis focused on monthly electricity data from Spain. The dataset originates from Eurostat and is titled *"Supply, transformation and consumption of electricity - monthly data"* ([DOI: 10.2908/NRG_CB_EM](https://doi.org/10.2908/NRG_CB_EM)).
+
+The main objectives of this project are:
+
+- Exploratory analysis of the time series behavior
+- Testing for stationarity
+- Identifying and estimating appropriate ARIMA models
+- Diagnosing model residuals
+- Producing forecasts and interpreting results
+
+Used libraries:
+
+```{r, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(forecast)
+library(urca)
+library(lmtest)
+library(tseries)
+library(astsa)
+```
+
+# Data Loading and Preparation
+
+Read the data from the Excel file.
+
+```{r}
+data <- suppressMessages(read_excel("data.xlsx", col_names = FALSE))
+
+df <- as.data.frame(t(data))
+colnames(df) <- c("Date", "Spain")
+
+df <- df %>%
+  filter(!is.na(Date)) %>%
+  slice(-1) %>%
+  mutate(Date = as.Date(paste(Date, "01", sep = "-"), format = "%Y-%m-%d"),
+         Spain = round(as.numeric(Spain), 3))
+
+rownames(df) <- df$Date
+df$Date <- NULL
+
+head(df, 3)
+
+tail(df, 3)
+```
+
+The dataset should be checked for any missing values:
+
+```{r}
+any(is.na(df))
+```
+
+```{r}
+# from 2008-1 to 2025-2
+
+(12*(24-8+1) + 2) - nrow(df)
+```
+
+Since there is no missing data, the variable can be converted to a time series object to enable proper temporal analysis and model fitting.
+
+```{r}
+ts_data <- ts(df$Spain, start = c(2008, 1), frequency = 12)
+```
+
+# Exploratory Data Analysis
+
+Number of observations:
+
+```{r}
+length(ts_data)
+```
+
+Time series plot:
+
+```{r}
+plot(ts_data,
+     ylab = "Electricity Consumption (GWh)",
+     xlab = "Time (Monthly)",
+     main = "Monthly Electricity Consumption in Spain")
+```
+
+Main observations from the time series plot:
+
+- Clear seasonal pattern with regular annual cycles
+
+- Variance appears stable (no visible heteroscedasticity)
+
+- Mild downward trend over time
+
+- No visible level shifts or structural breaks
+
+For the remaining exploratory analysis, the dataset should already be split into training and test sets to ensure that model diagnostics are performed only on the training portion.
+
+$$20\% \text{ of } 206 \approx 40$$
+
+```{r}
+n <- length(ts_data)
+
+# train: end before last 40 obs
+ts_train <- window(ts_data, end = time(ts_data)[n - 40])
+
+# test: start at the last 40 obs
+ts_test <- window(ts_data, start = time(ts_data)[n - 39])
+
+cat("Train data has", length(ts_train), "obervations.\n")
+cat("Test data has", length(ts_test), "obervations.\n")
+cat("Split proportion:", round(100 * length(ts_train) / n, 2),
+    "/", round(100 * length(ts_test) / n, 2))
+```
+
+A key consideration before modeling is whether the series should be transformed. Common transformations include logarithmic scaling or differencing to stabilize variance or achieve stationarity. This decision will be guided by visual inspection and formal statistical tests.
+
+## Heteroscedasticity
+
+Using the Breusch-Pagan test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Constant variance (homoscedasticity)} \\
+\text{H}_1\!:& \quad \text{Non-constant variance (heteroscedasticity)}
+\end{aligned}
+$$
+
+
+```{r}
+# prepare the data
+df <- data.frame(
+  time = time(ts_train),
+  value = as.numeric(ts_train)
+)
+
+# apply the test
+model <- lm(value ~ time, data = df)
+
+bptest(model)
+```
+
+The Breusch-Pagan test yields a p-value of 0.5541. Since the p-value is substantially greater than conventional significance levels (e.g., 0.05), there is no evidence to reject the null hypothesis. The residuals do not exhibit significant heteroscedasticity; the assumption of constant variance holds.
+
+
+Nonetheless, a Box-Cox transformation can still be applied to evaluate whether variance stabilization is noticeable or not.
+
+
+```{r, fig.height=10}
+par(mfrow = c(2, 1))
+
+plot(df$value, 
+     main = "Original Data", 
+     ylab = "Original",
+     xlab = "Time", 
+     type = "l")
+
+lambda <- BoxCox.lambda(df$value)
+plot(BoxCox(df$value, lambda), 
+     main = paste("Box-Cox Transformation (λ =", round(lambda, 2), ")"),
+     ylab = "Transformed", 
+     xlab = "Time", 
+     type = "l")
+```
+
+Since the Box-Cox transformation does not produce a noticeable difference in the variance structure and the Breusch-Pagan test indicated homoscedasticity, no transformation will be applied to the original series.
+
+## Stationarity
+
+As a first step, the ACF and PACF plots of the training series will be examined to assess temporal dependence and identify potential signs of non-stationarity, such as slow decay in autocorrelations. These plots help reveal if differencing may be required before model estimation.
+
+```{r}
+tsdisplay(ts_train, main = "Time series diagnosis")
+```
+
+The time series plot and the ACF reveal strong autocorrelations that decay slowly, indicating the presence of persistent structure over time. The PACF also shows significant early lags. These patterns are characteristic of a non-stationary series, suggesting that differencing is likely required before fitting a model.
+
+```{r}
+tsdisplay(diff(ts_train, lag = 12), main = "Diagnosis after seasonal differencing (lag = 12)")
+```
+
+```{r}
+tsdisplay(diff(diff(ts_train), lag = 12), main = "Seasonal differencing + first differencing")
+```
+
+After applying both seasonal differencing (lag = 12) and first differencing, the transformed series appears substantially more stable. The ACF shows a rapid drop-off, and most lags lie within the confidence bounds. The PACF displays limited significant spikes, further supporting stationarity. These patterns suggest that the combined differencing successfully removed trend and seasonal components, resulting in a stationary series.
+
+To draw a more robust inference regarding stationarity, formal statistical tests should be applied in addition to visual inspection. Specifically, the Augmented Dickey-Fuller (ADF) and KPSS tests will be used to assess the presence or absence of unit roots.
+
+Augmented Dickey-Fuller (ADF) test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{The series has a unit root (non-stationary)} \\
+\text{H}_1\!:& \quad \text{The series is stationary}
+\end{aligned}
+$$
+
+
+```{r}
+# test the original series, probably non-stationary
+adf.test(ts_train)
+
+# test after first differencing and seasonal differencing
+adf.test(diff(diff(ts_train, lag = 12), differences = 1))
+```
+
+The ADF test on the original series returns a p-value of 0.1572. This is above the conventional threshold (e.g., 0.05), so there is insufficient evidence to reject the null hypothesis. The original series is likely non-stationary.
+
+After applying seasonal and first differencing, the ADF test yields a p-value less than 0.01. This provides strong evidence against the null hypothesis, indicating that the differenced series is stationary.
+
+KPSS test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{The series is stationary} \\
+\text{H}_1\!:& \quad \text{The series has a unit root (non-stationary)}
+\end{aligned}
+$$
+
+```{r}
+kpss_test <- ur.kpss(diff(diff(ts_train, lag = 12)))
+summary(kpss_test)
+```
+
+The KPSS test was performed on the differenced series (type = "mu", with 4 lags). The test statistic is 0.0199, which is well below all critical values at common significance levels (e.g., 0.463 at 5%). Since the test statistic does not exceed the critical values, the null hypothesis of stationarity cannot be rejected. This test supports the conclusion that the differenced series is stationary, reinforcing the result from the ADF test.
+
+This concludes that the original series is non-stationary, but stationarity is achieved after applying one seasonal and one regular differencing.
+
+# Model Proposals
+
+## SARIMA
+
+From the exploratory analysis section, it is already established that the series exhibits strong seasonality and required both seasonal and non-seasonal differencing to achieve stationarity. This justifies the use of a SARIMA model, which explicitly accounts for both seasonal and non-seasonal components.
+
+Model identification will proceed by analyzing the ACF and PACF of the differenced series and by evaluating alternative specifications using information criteria (e.g., AICc) and residual diagnostics.
+
+```{r}
+acf2(diff(diff(ts_train, 12)))
+```
+
+From the ACF and PACF plots of the seasonally and first-differenced series (`diff(diff(ts_train, 12))`), the following model components can be inferred:
+
+Seasonal components (period = 12)
+
+- ACF shows a clear spike at lag 12, suggesting a seasonal MA(1) component.
+- PACF also shows a spike at lag 12, supporting the inclusion of a seasonal AR(1) term.
+- Seasonal differencing was already applied, so D = 1.
+
+Non-seasonal components
+
+- ACF shows a rapid decay after lag 1, with only the first autocorrelation clearly significant — consistent with a non-seasonal MA(1) structure.
+- PACF shows a significant spike at lag 1 and quick cutoff — suggesting a non-seasonal AR(1) is also plausible.
+- Regular differencing was applied, so d = 1.
+
+SARIMA(1,1,1)(1,1,1)[12] is a reasonable model candidate based on these diagnostics.
+
+```{r}
+fit <- auto.arima(ts_train,
+                  ic = "aicc",
+                  seasonal = TRUE,
+                  stepwise = TRUE, 
+                  approximation = TRUE)
+summary(fit)
+```
+
+SARIMA(2,0,2)(2,1,0)[12] with drift is also a reasonable model candidate based on `auto.arima`.
+
+```{r}
+fit <- auto.arima(ts_train,
+                  ic = "aicc",
+                  max.p = 5,
+                  d = 1,
+                  max.q = 5,
+                  max.P = 3,
+                  D = 1,
+                  max.Q = 3,
+                  seasonal = TRUE,
+                  stepwise = FALSE, 
+                  approximation = FALSE)
+summary(fit)
+```
+
+SARIMA(0,1,2)(3,1,0)[12] is also a reasonable model candidate based on a more custom `auto.arima`.
+
+To identify the optimal SARIMA model, a grid search can also be performed (a more custom `auto.arima`), over a range of seasonal and non-seasonal parameters. Each model is evaluated using AICc, which balances fit and complexity. This approach allows for a systematic comparison of candidate models, guided by penalized likelihood. While it increases the risk of overfitting due to the large number of combinations, safeguards are applied—such as restricting the total number of parameters—to limit model complexity.
+
+```{.r}
+# full grid search
+grid <- expand.grid(p = 0:5,
+                    d = 0:2,
+                    q = 0:5,
+                    P = 0:5,
+                    D = 1:3,
+                    Q = 0:5)
+
+# filtered grid search
+grid <- subset(grid, (p + q + P + Q) <= 7)
+
+# model fitting and evaluation
+results <- lapply(seq_len(nrow(grid)), function(i) {
+  row <- grid[i, ]
+  model_str <- paste0("(", row$p, ",", row$d, ",", row$q, ")(",
+                      row$P, ",", row$D, ",", row$Q, ")[12]")
+  if (i %% 100 == 0 || i == 1 || i == nrow(grid)) {
+    cat(sprintf("[STATUS] At model %d of %d: %s\n", i, nrow(grid), model_str))
+  }  
+  tryCatch({
+    fit <- Arima(ts_train,
+             order = c(row$p, row$d, row$q),
+             seasonal = list(order = c(row$P, row$D, row$Q), period = 12),
+             include.drift = FALSE)
+    data.frame(aicc = fit$aicc, model = model_str)
+  }, error = function(e) {
+      cat(sprintf("[ERROR] In model %d of %d: %s -> %s\n", i, nrow(grid), model_str, e$message))
+    NULL
+  })
+})
+
+# remove failed models
+results <- Filter(Negate(is.null), results)
+
+# save the sorted results
+results_df <- do.call(rbind, results)
+results_df <- results_df[order(results_df$aicc), ]
+write.csv(results_df, "results.csv", row.names = FALSE)
+```
+
+```{r}
+results_df <- read.csv("results.csv")
+head(results_df, 3)
+```
+
+
+Current candidates for the optimal SARIMA model:
+
+- SARIMA(1,1,1)(1,1,1)[12]
+
+- SARIMA(2,0,2)(2,1,0)[12]
+
+- SARIMA(0,1,2)(3,1,0)[12]
+
+- SARIMA(1,2,2)(0,3,3)[12]
+
+```{r, fig.width=10}
+models <- list(
+  list(order = c(1,1,1), seasonal = c(1,1,1)),
+  list(order = c(2,0,2), seasonal = c(2,1,0)),
+  list(order = c(0,1,2), seasonal = c(3,1,0)),
+  list(order = c(1,2,2), seasonal = c(0,3,3))
+)
+
+labels <- c("SARIMA(1,1,1)(1,1,1)[12]",
+            "SARIMA(2,0,2)(2,1,0)[12]",
+            "SARIMA(0,1,2)(3,1,0)[12]",
+            "SARIMA(1,2,2)(0,3,3)[12]")
+
+plot(ts_train, type = "l", col = "black", lwd = 1.5,
+     main = "Fitted Values from SARIMA Models vs Training Data",
+     ylab = "Electricity Consumption", xlab = "Time")
+
+colors <- c("blue", "red", "darkgreen", "purple")
+
+for (i in seq_along(models)) {
+  fit <- Arima(ts_train,
+               order = models[[i]]$order,
+               seasonal = list(order = models[[i]]$seasonal, period = 12))
+  lines(fitted(fit), col = colors[i], lwd = 1.5)
+}
+
+legend("bottomleft",
+       legend = c("Observed", labels),
+       col = c("black", colors),
+       lty = 1,
+       lwd = 1.5)
+```
+
+
+Based on the visual alignment of fitted values with the observed training data and considering model complexity, the most favorable choices are:
+
+1. SARIMA(1,1,1)(1,1,1)[12]
+
+2. SARIMA(2,0,2)(2,1,0)[12]
+
+3. SARIMA(0,1,2)(3,1,0)[12]
+
+Evaluation of the First Choice: SARIMA(1,1,1)(1,1,1)[12]
+
+```{r}
+sarima1 <- forecast::Arima(ts_train,
+                           order = c(1,1,1),
+                           seasonal = c(1,1,1))
+```
+
+```{r}
+summary(sarima1)
+```
+```{r}
+# TRUE if significantly different from zero (all should be)
+0.0579 / 0.0894 >= 1.96
+```
+
+`sar1` is not significant!
+
+```{r}
+# correlation between parameters (should be <.7)
+vcov_mat <- vcov(sarima1)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+
+```{r}
+checkresiduals(sarima1)
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima1)), "and variance", var(residuals(sarima1)))
+```
+
+```{r}
+qqnorm(residuals(sarima1)); qqline(residuals(sarima1))
+```
+
+Evaluation of the Second Choice: SARIMA(2,0,2)(2,1,0)[12]
+
+```{r}
+sarima2 <- forecast::Arima(ts_train,
+                           order = c(2,0,2),
+                           seasonal = c(2,1,0))
+```
+
+```{r}
+summary(sarima2)
+```
+
+```{r}
+0.0659 / 0.0940 >= 1.96
+```
+
+`ar2` is not significant!
+
+```{r}
+vcov_mat <- vcov(sarima2)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+```{r}
+checkresiduals(sarima2)
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima2)), "and variance", var(residuals(sarima2)))
+```
+
+```{r}
+qqnorm(residuals(sarima2)); qqline(residuals(sarima2))
+```
+
+Evaluation of the Third Choice: SARIMA(0,1,2)(3,1,0)[12]
+
+```{r}
+sarima3 <- forecast::Arima(ts_train,
+                           order = c(0,1,2),
+                           seasonal = c(3,1,0))
+```
+
+```{r}
+summary(sarima3)
+```
+
+They are all significant!
+
+```{r}
+vcov_mat <- vcov(sarima3)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+No significant correlation.
+
+```{r}
+checkresiduals(sarima3)
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima3)), "and variance", var(residuals(sarima3)))
+```
+
+```{r}
+qqnorm(residuals(sarima3)); qqline(residuals(sarima3))
+```
+
+Since no model fully satisfied the diagnostic criteria for a well-specified model—namely, uncorrelated, homoscedastic, and normally distributed residuals—further tuning is necessary.
+
+# AQUI AUQI AUQI AUQIA UJQIAUQ AUIQUAIQUAIUQIAUQIUAIQ AUQIUA QUIAUQIAUQ
+
+# POR ENCONTRAR O MELHOR ARIMA  !!!!!!!!!!!! POR ECONTRAR
+
+# POR MELHORAR ESTA PARTE A ESCRITA E ISSO
+
+# AQUI VEM SÓ O MELHOR ARIMA E ESCRITA DELE E PQ É BOM E ISSO
+
+
+```{r}
+fit_arima <- forecast::Arima(ts_train,
+                           order = c(1,1,1),
+                           seasonal = c(1,1,1))
+```
+
+```{r}
+summary(fit_arima)
+```
+
+```{r}
+vcov_mat <- vcov(fit_arima)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+```{r}
+checkresiduals(fit_arima)
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(fit_arima)), "and variance", var(residuals(fit_arima)))
+```
+
+```{r}
+qqnorm(residuals(fit_arima)); qqline(residuals(fit_arima))
+```
+
+```{r}
+# Shapiro-Wilk test (recommended only for n ≤ 5000)
+shapiro.test(residuals(fit_arima))
+
+# Kolmogorov–Smirnov test against normal distribution
+ks.test(residuals(fit_arima), "pnorm", mean=mean(residuals(fit_arima)), sd=sd(residuals(fit_arima)))
+```
+
+## STLM
+
+(model is adequate)
+
+```{r}
+fit_stlm <- stlm(ts_train,
+                 s.window = "periodic",
+                 method = "arima")
+
+summary(fit_stlm)
+```
+
+```{r}
+checkresiduals(fit_stlm)
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(fit_stlm)), "and variance", var(residuals(fit_stlm)))
+```
+
+```{r}
+qqnorm(residuals(fit_stlm)); qqline(residuals(fit_stlm))
+```
+
+```{r}
+# Shapiro-Wilk test (recommended only for n ≤ 5000)
+shapiro.test(residuals(fit_stlm))
+
+# Kolmogorov–Smirnov test against normal distribution
+ks.test(residuals(fit_stlm), "pnorm", mean=mean(residuals(fit_stlm)), sd=sd(residuals(fit_stlm)))
+```
+
+## ETS
+
+```{r}
+fit_ets <- ets(ts_train)
+summary(fit_ets)
+```
+
+```{r}
+checkresiduals(fit_ets)
+```
+
+even with box cox transf, stationarity and any type of transf, ljox still rejects? so residuals have autocorr, not a good model
+
+because ..... just of the time series type?
+
+If ETS fails , Holt-Winters fails harder.
+
+## GARCH ?
+
+```{.r}
+library(rugarch)
+ts_diff <- diff(diff(ts_train, lag = 12), differences = 1)
+
+# Specify GARCH(1,1) with ARMA(1,1) in the mean (adjust armaOrder as needed)
+spec <- ugarchspec(
+  variance.model = list(model = "sGARCH", garchOrder = c(1,1)),
+  mean.model     = list(armaOrder = c(1,1), include.mean = FALSE),
+  distribution.model = "norm"  # or "std" for Student-t, if tails are heavy
+)
+
+fit_garch <- ugarchfit(spec = spec, data = ts_diff)
+show(fit_garch)
+plot(fit_garch)  # volatility, residuals, standardized residuals
+resid_std <- residuals(fit_garch, standardize = TRUE)
+
+# Check for white noise
+acf(resid_std)         # Should show no significant spikes
+acf(resid_std^2)       # Should also be uncorrelated if GARCH fit well
+forecast_garch <- ugarchforecast(fit_garch, n.ahead = 20)
+plot(forecast_garch)  # Shows forecasted conditional variance
+
+```
+
+
+
+
+
+
+
+## OUTROS MODELOS (must always check if statin ir requeried)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
