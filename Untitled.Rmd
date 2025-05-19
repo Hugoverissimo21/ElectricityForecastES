@@ -27,6 +27,7 @@ library(urca)
 library(lmtest)
 library(tseries)
 library(astsa)
+library(FinTS)
 ```
 
 # Data Loading and Preparation
@@ -547,9 +548,59 @@ shapiro.test(residuals(fit_arima))
 ks.test(residuals(fit_arima), "pnorm", mean=mean(residuals(fit_arima)), sd=sd(residuals(fit_arima)))
 ```
 
+
+
+
+
+## GARCH
+
+Having identified the best-fitting ARIMA model, the next step is to test whether a GARCH model is appropriate for capturing any remaining conditional heteroscedasticity in the residuals.
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{No ARCH effects (homoscedasticity)} \\
+\text{H}_1\!:& \quad \text{Presence of ARCH effects (heteroscedasticity)}
+\end{aligned}
+$$
+
+```{r}
+ArchTest(residuals(fit_arima), lags = 12)
+```
+
+The test returned a p-value of 0.6337. As the p-value is well above common significance levels, we fail to reject the null hypothesis. There is no evidence of ARCH effects in the residuals; a GARCH extension is not required.
+
+## ETS
+
+An ETS model will now be applied. ETS models are well-suited for time series with strong trend and seasonal components, and unlike ARIMA, they do not require stationarity. This alternative approach will allow for comparison in terms of both in-sample fit and forecasting accuracy. Model components (Error, Trend, Seasonal) are selected automatically based on information criteria.
+
+```{r}
+fit_ets <- ets(ts_train, ic="aicc")
+summary(fit_ets)
+```
+
+The ETS model selected based on AICc is: ETS(M,N,A)
+
+This configuration indicates:
+
+- Error: Multiplicative: the impact of random shocks scales with the level of the series
+
+- Trend: None: no long-term directional movement is modeled
+
+- Seasonality: Additive: seasonal fluctuations are constant in magnitude across time
+
+This model structure reflects a stable seasonal pattern without an explicit trend, consistent with the behavior observed after differencing the original series.
+
+```{r}
+checkresiduals(fit_ets)
+```
+
+By applying the `checkresiduals` function to the model, it becomes evident that the residuals display significant autocorrelation, as confirmed by the Ljung-Box test (p-value = 0.0027). The residual diagnostics indicate that the ETS model does not adequately capture the underlying dynamics of the series.
+
+The ETS framework already encompasses the Holt-Winters family of models as special cases, so they will not be tested separately.
+
 ## STLM
 
-(model is adequate)
+The next approach involves applying a Seasonal and Trend decomposition using Loess (STL), followed by modeling the seasonally adjusted series. This method, implemented via the `stlm()` function, decomposes the original series into trend, seasonal, and remainder components in a flexible, nonparametric way. After decomposition, the remainder is modeled using ARIMA or ETS, allowing for a hybrid structure that combines non-linear seasonal smoothing with parametric short-term dynamics.
 
 ```{r}
 fit_stlm <- stlm(ts_train,
@@ -563,6 +614,16 @@ summary(fit_stlm)
 checkresiduals(fit_stlm)
 ```
 
+The residual diagnostics from the model show a relatively well-behaved structure:
+
+- The residual time plot displays no obvious patterns or structural deviations.
+
+- The ACF of the residuals remains mostly within the confidence bounds, with no strong autocorrelation.
+
+- The histogram suggests approximate symmetry, though some deviation from normality is visible.
+
+- The Ljung-Box test confirms the absence of significant autocorrelation
+
 ```{r}
 cat("The residuals have mean", mean(residuals(fit_stlm)), "and variance", var(residuals(fit_stlm)))
 ```
@@ -572,63 +633,59 @@ qqnorm(residuals(fit_stlm)); qqline(residuals(fit_stlm))
 ```
 
 ```{r}
-# Shapiro-Wilk test (recommended only for n ≤ 5000)
+# Shapiro-Wilk test
 shapiro.test(residuals(fit_stlm))
 
-# Kolmogorov–Smirnov test against normal distribution
+# Kolmogorov–Smirnov test
 ks.test(residuals(fit_stlm), "pnorm", mean=mean(residuals(fit_stlm)), sd=sd(residuals(fit_stlm)))
 ```
 
-## ETS
+Normality of the residuals was evaluated using both the Shapiro-Wilk and Kolmogorov-Smirnov tests, along with visual inspection via the Q-Q plot.
 
-```{r}
-fit_ets <- ets(ts_train)
-summary(fit_ets)
-```
+- Shapiro-Wilk test
 
-```{r}
-checkresiduals(fit_ets)
-```
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals are normally distributed} \\
+\text{H}_1\!:& \quad \text{Residuals deviate from normality}
+\end{aligned}
+$$
 
-even with box cox transf, stationarity and any type of transf, ljox still rejects? so residuals have autocorr, not a good model
+p-value = 0.01422: ~Rej. H0 (depends on 1% or 5%): Some evidence of non-normality.
 
-because ..... just of the time series type?
+- Kolmogorov-Smirnov test
 
-If ETS fails , Holt-Winters fails harder.
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals follow the normal distribution} \\
+\text{H}_1\!:& \quad \text{Residuals do not follow the normal distribution}
+\end{aligned}
+$$
 
-## GARCH ?
+p-value = 0.3263: Fail to reject H0: no significant evidence of non-normality.
+
+This difference arises because the Shapiro-Wilk test is more robust against non-normality, particularly for skewed distributions and in small samples. The Kolmogorov-Smirnov test, on the other hand, is more conservative and may fail to reject the null hypothesis for non-normal data, especially in small samples. 
+
+- Q-Q plot
+
+Shows minor tail deviations but an overall acceptable alignment with the theoretical normal distribution.
+
+While the Shapiro-Wilk test suggests a slight deviation from normality, the K-S test and graphical analysis support the assumption of approximate normality. This level of deviation is not sufficient to disqualify the model for practical use.
+
+# Future Observations Forecast
+
+# POR FAZER
+
+# ESTOU AQUI DPS DE FAZER O MELHOR ARIMA
+
+# ALLEZ ALLEZ FORECAST MISSING
+
+models to be used
 
 ```{.r}
-library(rugarch)
-ts_diff <- diff(diff(ts_train, lag = 12), differences = 1)
-
-# Specify GARCH(1,1) with ARMA(1,1) in the mean (adjust armaOrder as needed)
-spec <- ugarchspec(
-  variance.model = list(model = "sGARCH", garchOrder = c(1,1)),
-  mean.model     = list(armaOrder = c(1,1), include.mean = FALSE),
-  distribution.model = "norm"  # or "std" for Student-t, if tails are heavy
-)
-
-fit_garch <- ugarchfit(spec = spec, data = ts_diff)
-show(fit_garch)
-plot(fit_garch)  # volatility, residuals, standardized residuals
-resid_std <- residuals(fit_garch, standardize = TRUE)
-
-# Check for white noise
-acf(resid_std)         # Should show no significant spikes
-acf(resid_std^2)       # Should also be uncorrelated if GARCH fit well
-forecast_garch <- ugarchforecast(fit_garch, n.ahead = 20)
-plot(forecast_garch)  # Shows forecasted conditional variance
-
+fit_stlm
+fit_arima
 ```
-
-
-
-
-
-
-
-## OUTROS MODELOS (must always check if statin ir requeried)
 
 
 
