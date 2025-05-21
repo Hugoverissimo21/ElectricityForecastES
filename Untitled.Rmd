@@ -880,14 +880,19 @@ cat("The SARIMA 95% PI has an avg width of", mean(width_95_arima),"\n",
 
 The STLM model produces narrower 95% PI on average compared to SARIMA. This means that the STLM model yields forecasts with lower uncertainty and higher precision. Narrower PIs indicate that the model is more confident in its predictions, which is desirable when coverage is not sacrificed.
 
-# POR FAZER
-
-# ALLEZ ALLEZ FORECAST MISSING
-
-# AUQI AUIQ AQUIUAQIUAIQUIAUQIUAIUQAQ
-
 # Model Choice
 
-stlm because autocrr of resd, pi, ... metricsm ...
+The chosen model is the STLM with ARIMA applied to the seasonally adjusted component, justified by the following points:
 
+- Lower autocorrelation in residuals during model fitting on the training set
+
+- Stronger indications that residuals follow a normal distribution
+
+- Reduced variance in residuals compared to SARIMA(1,1,1)(1,1,1)[12]
+
+- Practically identical forecast accuracy to SARIMA(1,1,1)(1,1,1)[12], with no meaningful difference in performance
+
+- Narrower 95% prediction intervals on average, indicating more confident forecasts
+
+These factors support the selection of STLM(ARIMA) as the final model for forecasting monthly electricity consumption.
 
