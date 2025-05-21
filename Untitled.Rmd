@@ -13,7 +13,7 @@ The main objectives of this project are:
 
 - Exploratory analysis of the time series behavior
 - Testing for stationarity
-- Identifying and estimating appropriate ARIMA models
+- Identifying and estimating appropriate models
 - Diagnosing model residuals
 - Producing forecasts and interpreting results
 
@@ -781,7 +781,104 @@ autoplot(ts_test, series = "Test") +
   scale_colour_manual(values = c("Test" = "black", "Forecast" = "blue"))
 ```
 
+Forecast accuracy was assessed using `forecast::accuracy()`, which compares fitted values on the training set and forecast values against the test set. In both cases, the training and test error metrics are very close, indicating no signs of overfitting.  
+
+Visually, the predicted values follow the behavior of the actual test data closely, with aligned seasonal patterns and trend shifts.
+
+Both models generalize well to unseen data and can be considered valid for forecasting purposes.
+
 # Results
+
+## Forecast Accuracy Comparison on Test Set
+
+The forecast accuracy of the SARIMA and STLM models is evaluated using standard error metrics:  
+
+- ME (Mean Error): Measures bias. A value close to 0 is desirable, but this metric can be misleading due to cancellation of positive and negative errors.
+
+- RMSE (Root Mean Squared Error): Sensitive to large deviations. Useful when large errors are particularly undesirable. Penalizes outliers more heavily.
+
+- MAE (Mean Absolute Error): Interpretable and robust. Less sensitive to outliers than RMSE. A solid general-purpose metric.
+
+- MPE (Mean Percentage Error): Can produce misleading values when actuals approach zero. May result in large positive or negative values.
+
+- MAPE (Mean Absolute Percentage Error): Intuitive and scale-independent, but unreliable when actual values are near zero.
+
+- MASE (Mean Absolute Scaled Error): Scale-free and comparable across datasets. Values < 1 indicate better performance than the naive forecast. Reliable and interpretable.
+
+- ACF1 (Lag-1 Autocorrelation of Residuals): Measures autocorrelation in residuals. Ideal values are near 0, indicating residuals are uncorrelated.
+
+- Theil's U: Compares performance to a naive benchmark. Values < 1 indicate better-than-naive forecasts.
+
+```{r}
+acc_arima <- forecast::accuracy(arima_forecast, ts_test)
+acc_stlm  <- forecast::accuracy(stlm_forecast, ts_test)
+
+comparison <- rbind(
+  SARIMA = acc_arima["Test set", ],
+  STLM   = acc_stlm["Test set",  ]
+)
+
+round(comparison, 3)
+```
+
+The forecast accuracy metrics for SARIMA and STLM are very similar across all indicators, reflecting comparable overall performance.
+
+## Analysis of 95% Prediction Intervals
+
+The 95% prediction intervals (PI) represent the range within which future observations are expected to fall with 95% confidence.
+
+```{r}
+# extract forecast time indices
+time_vals <- time(arima_forecast$mean)
+df_arima <- data.frame(
+  time = time_vals,
+  lo95 = arima_forecast$lower[,2],
+  hi95 = arima_forecast$upper[,2]
+)
+
+df_stlm <- data.frame(
+  time = time(stlm_forecast$mean),
+  lo95 = stlm_forecast$lower[,2],
+  hi95 = stlm_forecast$upper[,2]
+)
+
+# plot the models 95% PI bands
+ggplot() +
+  autolayer(ts_test, series = "Actual") +
+  geom_ribbon(data = df_arima, aes(x = time, ymin = lo95, ymax = hi95, fill = "SARIMA 95% PI"), alpha = 0.5) +
+  geom_ribbon(data = df_stlm, aes(x = time, ymin = lo95, ymax = hi95, fill = "STLM 95% PI"), alpha = 0.5) +
+  autolayer(ts_test, series = "Actual") +
+  labs(title = "Forecast Comparison: SARIMA vs STLM",
+       x = "Time (Monthly)",
+       y = "Electricity Consumption (GWh)") +
+  scale_fill_manual(values = c("SARIMA 95% PI" = "#0072B2", "STLM 95% PI" = "#D55E00")) +
+  scale_color_manual(values = c("Actual" = "black")) +
+  theme_minimal()
+```
+
+Visually, both the SARIMA and STLM forecasts maintain intervals that consistently cover the actual values in the test set, indicating calibrated uncertainty estimates. The width of the intervals remains stable over time.
+
+```{r}
+# accuracy of 95% PI
+inside_95_arima <- ts_test >= arima_forecast$lower[,2] & ts_test <= arima_forecast$upper[,2]
+inside_95_stlm <- ts_test >= stlm_forecast$lower[,2] & ts_test <= stlm_forecast$upper[,2]
+
+cat("The SARIMA has", mean(inside_95_arima)*100,"% of the real values inside its 95% PI.","\n",
+    "The STLM has", mean(inside_95_stlm)*100,"% of the real values inside its 95% PI")
+```
+
+The test observations fall within the 95% intervals for all time points, suggesting that both models produce reliable forecasts.
+
+```{r}
+# avg width of 95% PI
+width_95_arima <- arima_forecast$upper[,2] - arima_forecast$lower[,2]
+width_95_stlm <- stlm_forecast$upper[,2] - stlm_forecast$lower[,2]
+
+cat("The SARIMA 95% PI has an avg width of", mean(width_95_arima),"\n",
+    "The STLM 95% PI has an avg width of", mean(width_95_stlm))
+```
+
+The STLM model produces narrower 95% PI on average compared to SARIMA. This means that the STLM model yields forecasts with lower uncertainty and higher precision. Narrower PIs indicate that the model is more confident in its predictions, which is desirable when coverage is not sacrificed.
 
 # POR FAZER
 
@@ -789,19 +886,8 @@ autoplot(ts_test, series = "Test") +
 
 # AUQI AUIQ AQUIUAQIUAIQUIAUQIUAIUQAQ
 
-Accuracy of the forecasts should be
-compared. (lets also use conf inter (see code below))
+# Model Choice
 
-Discussion should include the model choice.
-
-```{r}
-# Example for 95% PI
-inside_95 <- ts_test >= arima_forecast$lower[,2] & ts_test <= arima_forecast$upper[,2]
-coverage_95 <- mean(inside_95)
-
-width_95 <- arima_forecast$upper[,2] - arima_forecast$lower[,2]
-mean_width_95 <- mean(width_95)
-```
-
+stlm because autocrr of resd, pi, ... metricsm ...
 
 
