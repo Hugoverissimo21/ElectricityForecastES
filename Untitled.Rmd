@@ -655,6 +655,15 @@ fit_stlm <- stlm(ts_train,
 
 summary(fit_stlm)
 ```
+```{r, fig.height=7}
+# STL components (seasonal, trend, remainder)
+plot(fit_stlm$stl)
+```
+
+```{r}
+# ARIMA fitted to the seasonally adjusted series (?)
+summary(fit_stlm$model)
+```
 
 ```{r}
 checkresiduals(fit_stlm)
