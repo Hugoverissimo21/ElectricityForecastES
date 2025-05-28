@@ -2,12 +2,12 @@
 
 \usepackage{float}
 \usepackage{amsmath}
-\usepackage{subfigure,graphicx}
+\usepackage{subcaption,graphicx}
 \usepackage{multicol}
 \usepackage{stfloats}
 \usepackage[portuguese]{babel}
-%\usepackage{hyperref}
 \usepackage{booktabs}
+\usepackage{subcaption}
 \usepackage[protrusion=true,expansion=true]{microtype}
 \usepackage{amsfonts,latexsym,amssymb,euscript,xr,amsthm}
 
@@ -29,53 +29,116 @@ abstrato
 
 \section{Introdução}
 
-O presente trabalho tem como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, utilizando dados oficiais do Eurostat \cite{eurostat_nrg_cb_em}. A análise de séries temporais neste contexto reveste-se de particular importância, dado o papel estratégico da energia elétrica na economia e na definição de políticas públicas. A capacidade de antecipar padrões de consumo permite uma melhor gestão de recursos, planeamento da produção e tomada de decisões informadas por parte dos agentes do setor energético.
 
-baseia-se em ... ("metodologia e coisas usadas")
+A monitorização e previsão do consumo de eletricidade desempenham um papel central na gestão energética de qualquer país desenvolvido. Em contextos de transição energética, planeamento de capacidade, definição de políticas públicas e avaliação de impacto ambiental, a compreensão detalhada dos padrões de consumo é essencial. Espanha, sendo uma das principais economias da Europa, apresenta uma dinâmica energética particularmente relevante, com variações sazonais marcadas e um peso crescente das fontes renováveis \cite{REE2023}.
 
-CHATGPT:
+Assim, o presente trabalho tem como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, utilizando dados oficiais do Eurostat \cite{eurostat_nrg_cb_em}. Através da análise de séries temporais, pretende-se identificar padrões estruturais e comportamentos sazonais, com vista à construção de modelos preditivos que possam apoiar a tomada de decisão estratégica no domínio da energia.
 
-A metodologia seguida baseia-se em técnicas clássicas de modelação de séries temporais. Inicia-se com uma análise exploratória da série, onde se investigam tendências, sazonalidade e possíveis irregularidades. A estacionariedade é avaliada tanto de forma gráfica como através de testes formais (ADF e KPSS).
+Tendo em objetivo em vista, serão utilizados diferentes modelos estatísticos de séries temporais, nomeadamente modelos SARIMA, GARCH, ETS e STLM. A escolha destes modelos justifica-se pela sua capacidade comprovada de capturar componentes sazonais, tendências estruturais e padrões residuais em séries univariadas.
 
-Com a série estacionária, procede-se à estimação de vários modelos SARIMA, que incorporam componentes sazonais e não sazonais. A seleção do modelo baseia-se em critérios de informação (AICc), ajustamento visual e diagnóstico dos resíduos. O objetivo final é identificar um modelo que capture adequadamente a estrutura temporal dos dados e permita previsões robustas e fiáveis.
-
+A comparação entre os modelos será efetuada com base no desempenho preditivo em dados de validação, bem como na análise dos resíduos obtidos durante o treino. A avaliação conjunta destes critérios permite não apenas identificar o modelo com melhor capacidade de previsão, mas também assegurar que os pressupostos estatísticos subjacentes à modelação são razoavelmente cumpridos.
 
 
-\section{Data and exploratory analysis/data transformation}
 
-a
 
-bla bla falar tbm do haver um outlier em 2020 devido ao covid mas que acabou por n after a performance dos modelos pelo que nao feito necessario qq cuidado especial
 
-\subsection{c}
+\section{Análise Exploratória dos Dados}
 
-a
+Como já referido anteriormente, os dados utilizados neste estudo estão disponíveis na plataforma do Eurostat \cite{eurostat_nrg_cb_em}. Esta base de dados inclui, para além dos valores mensais de consumo de eletricidade em Espanha, informações equivalentes para um total de 40 países, abrangendo outros países europeus. Tal abrangência torna esta fonte particularmente robusta e adequada para estudos comparativos e análises aprofundadas no domínio da energia.
 
-\begin{table}[H]
-\centering
-\caption{OLD OLD OLD Comparação da Acurácia Entre os Modelos Desenvolvidos e os Modelos do Artigo}
-\label{accuracies}
-\begin{tabular}{l|cc|cc|c}
-\toprule
- & \multicolumn{2}{c|}{Train Set} & \multicolumn{2}{c|}{Test Set} & \\
-\textbf{Classificador} & \textbf{Full} & \textbf{Top 15} & \textbf{Full} & \textbf{Top 15} & \textbf{Artigo} \\
-\midrule
-Random Forest & 99.3 & 98.7 & 99.7 & 98.9 & 98.7 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Neste estudo, foi selecionado exclusivamente o caso de Espanha, dado tratar-se de uma análise de séries temporais univariadas. Os dados correspondem ao consumo mensal de eletricidade neste país, medido em Gigawatt-hora (GWh), abrangendo o período de janeiro de 2008 a fevereiro de 2025. A série é completa, sem quaisquer valores em falta, totalizando 206 observações consecutivas.
 
-\section{ Model proposals}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/timeserie.png}
+    \caption{Série temporal univariada do consumo mensal de eletricidade em Espanha (2008–2025).}
+    \label{fig:timeserie}
+\end{figure}
+
+Na Fig. \ref{fig:timeserie} podem-se observar as 206 observações relativas ao caso em estudo, demonstrando a presença de sazonalidade nos dados, juntamente com uma possível tendência decrescente e um valor discrepante no início de 2020.
+
+Este valor, após uma breve investigação, aparenta estar relacionado com o impacto da pandemia de COVID-19, que provocou alterações significativas nos padrões de consumo energético devido à redução da atividade económica, confinamentos e mudanças no comportamento da população \cite{outlier_2020}. Por não se tratar de um erro de registo ou medição, o valor não será removido nem ajustado. No entanto, será tido em conta com mais atenção na análise do desempenho dos diferentes modelos.
+
+\subsection{Separação dos Dados em Treino e Teste}
+
+Para avaliar a capacidade preditiva dos modelos, a série temporal foi dividida em dois conjuntos: treino e teste. O conjunto de treino inclui as observações de janeiro de 2008 a outubro de 2021 (166 observações), enquanto que o conjunto de teste inclui as observações de novembro de 2021 a fevereiro de 2025 (40 observações).
+
+Esta divisão resulta numa proporção aproximada de 80\% para treino e 20\% para teste, respeitando a ordem cronológica da série, o que é essencial em problemas de previsão temporal. Os modelos serão ajustados exclusivamente com os dados de treino, sendo a sua capacidade de generalização avaliada com base no desempenho sobre os dados de teste.
+
+\subsection{Análise da Estacionariedade}
+
+A estacionariedade é uma propriedade fundamental em muitas técnicas de modelação de séries temporais, exigindo que as características estatísticas da série, como a média, a variância e a autocovariância, permaneçam constantes ao longo do tempo.
+
+Antes de proceder a uma avaliação mais formal da estacionariedade, analisou-se a necessidade de aplicar uma transformação de Box-Cox, com o objetivo de estabilizar a variância ao longo do tempo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/boxcox.png}
+    \caption{Avaliação da transformação Box-Cox.}
+    \label{fig:boxcox}
+\end{figure}
+
+Através da análise da Fig. \ref{fig:boxcox}, e tendo em conta o valor de $\lambda$ ajustado automaticamente ($\lambda = 1.91$), bem como a representação gráfica da série transformada, conclui-se que não há qualquer benefício relevante em aplicar a transformação. Não se observam indícios visuais de heterocedasticidade na série original.
+
+Para confirmar esta impressão, foi aplicado o teste de Breusch-Pagan à série original. Este teste avalia a presença de heterocedasticidade com as seguintes hipóteses:
+
+\begin{itemize}
+    \item $H_0$: a série tem variância constante;
+    \item $H_1$: a série tem variância não constante.
+\end{itemize}
+
+O p-valor obtido foi $0.5541$, valor claramente superior ao nível de significância usual (por exemplo, 5\%), pelo que não se rejeita a hipótese nula. Assim, conclui-se que não há evidência estatística de heterocedasticidade na série, o que reforça a decisão de não aplicar qualquer transformação estabilizadora da variância e suporta a suposição de variância constante exigida pela estacionariedade.
+
+De seguida, procedeu-se à restante avaliação da estacionariedade da série, começando por uma inspeção visual. Esta análise foi complementada pelas funções de autocorrelação (ACF) e autocorrelação parcial (PACF), que permitem identificar padrões de dependência temporal e indicar a presença de componentes sazonais ou tendências persistentes. Estas ferramentas oferecem uma primeira aproximação ao comportamento estrutural da série, orientando eventuais transformações necessárias para satisfazer os pressupostos dos modelos a aplicar.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{assets/stationary_1.png}
+        \caption{Série original com respetiva ACF e PACF.}
+        \label{fig:stationary_1}
+    \end{subfigure}
+    
+    \vspace{2em}
+
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{assets/stationary_3.png}
+        \caption{Série diferenciada (ordem 1 e ordem 12) com respetiva ACF e PACF.}
+        \label{fig:stationary_3}
+    \end{subfigure}
+
+    \caption{Avaliação visual da estacionariedade: série temporal original (a) e após diferenciações (b).}
+    \label{fig:stationary_analysis}
+\end{figure}
+
+A partir da análise gráfica e das funções ACF e PACF, torna-se evidente que a série original não é estacionária, apresentando tanto sazonalidade, como uma leve tendência. No entanto, após a aplicação de diferenciações de ordem 1 (para remover a tendência) e 12 (para eliminar a componente sazonal), a série transformada revela um comportamento estacionário, com médias e variâncias aproximadamente constantes ao longo do tempo e autocorrelações significativamente reduzidas.
+
+Esta transformação é essencial para garantir a validade dos pressupostos dos modelos lineares clássicos, como o SARIMA, que exigem estacionariedade da série de entrada.
+
+Para confirmar formalmente esta avaliação, foram aplicados dois testes estatísticos complementares: o teste de Dickey-Fuller aumentado (ADF), cuja hipótese nula assume a presença de raiz unitária (não estacionariedade), e o teste KPSS, cuja hipótese nula assume estacionariedade.
+
+A aplicação dos testes formais confirmou a avaliação visual inicial. No caso da série original, esta é indicada não estacionária. Após a aplicação de diferenciações de ordem 1 (para eliminar a tendência) e 12 (para remover a sazonalidade), ambos os testes conduzem à conclusão oposta: o teste ADF rejeita a presença de raiz unitária, e o teste KPSS não rejeita a hipótese de estacionariedade.
+
+Assim, a série transformada é considerada estacionária para qualquer nível de confiança típico, incluindo $1\%$.
+
+\section{Propostas de Modelos}
+
+
 
  (SARIMA type and/or ETS model and/or GARCH model):
+
+
+
+\subsection{SARIMA}
 
 Box  Jenkins methodology if SARIMA models; this includes model identification,
 parameter estimation, diagnostic evaluation (parameters correlation,
 parameters significance, residual analysis).
 
-\subsection{SARIMA}
 
-b
+
 
 \section{Future observations forecast}
 

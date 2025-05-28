@@ -116,15 +116,12 @@ ts_test <- window(ts_data, start = time(ts_data)[n - 39])
 
 cat("Train data has", length(ts_train), "obervations.\n")
 cat("Test data has", length(ts_test), "obervations.\n")
-cat("Split proportion:", round(100 * length(ts_train) / n, 2),
-    "/", round(100 * length(ts_test) / n, 2))
-```
 
-```{r}
-head(ts_train, 1)
-tail(ts_train, 1)
-head(ts_test, 1)
-tail(ts_test, 1)
+cat("Split proportion:", round(100 * length(ts_train) / n, 2),
+    "/", round(100 * length(ts_test) / n, 2), "\n")
+
+cat("Train starts at", start(ts_train), "and ends at", end(ts_train), "\n")
+cat("Test starts at", start(ts_test), "and ends at", end(ts_test), "\n")
 ```
 
 A key consideration before modeling is whether the series should be transformed. Common transformations include logarithmic scaling or differencing to stabilize variance or achieve stationarity. This decision will be guided by visual inspection and formal statistical tests.
