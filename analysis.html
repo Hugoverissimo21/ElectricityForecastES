@@ -11,9 +11,9 @@
 
 <meta name="author" content="Hugo" />
 
-<meta name="date" content="2025-05-21" />
+<meta name="date" content="2025-05-28" />
 
-<title>ST01</title>
+<title>ST01: Monthly electricity consumption in Spain</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,9 +350,10 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">ST01</h1>
+<h1 class="title toc-ignore">ST01: Monthly electricity consumption in
+Spain</h1>
 <h4 class="author">Hugo</h4>
-<h4 class="date">2025-05-21</h4>
+<h4 class="date">2025-05-28</h4>
 
 </div>
 
@@ -461,6 +462,18 @@ cat(&quot;Train data has&quot;, length(ts_train), &quot;obervations.\n&quot;)</c
 <pre class="r"><code>cat(&quot;Split proportion:&quot;, round(100 * length(ts_train) / n, 2),
     &quot;/&quot;, round(100 * length(ts_test) / n, 2))</code></pre>
 <pre><code>## Split proportion: 80.58 / 19.42</code></pre>
+<pre class="r"><code>head(ts_train, 1)</code></pre>
+<pre><code>##        Jan
+## 2008 24597</code></pre>
+<pre class="r"><code>tail(ts_train, 1)</code></pre>
+<pre><code>##          Oct
+## 2021 18267.5</code></pre>
+<pre class="r"><code>head(ts_test, 1)</code></pre>
+<pre><code>##           Nov
+## 2021 19371.89</code></pre>
+<pre class="r"><code>tail(ts_test, 1)</code></pre>
+<pre><code>##           Feb
+## 2025 18208.06</code></pre>
 <p>A key consideration before modeling is whether the series should be
 transformed. Common transformations include logarithmic scaling or
 differencing to stabilize variance or achieve stationarity. This

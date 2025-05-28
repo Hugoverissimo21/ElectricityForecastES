@@ -1,5 +1,5 @@
 ---
-title: "ST01"
+title: "ST01: Monthly electricity consumption in Spain"
 author: "Hugo"
 date: "`r Sys.Date()`"
 output: html_document
@@ -118,6 +118,13 @@ cat("Train data has", length(ts_train), "obervations.\n")
 cat("Test data has", length(ts_test), "obervations.\n")
 cat("Split proportion:", round(100 * length(ts_train) / n, 2),
     "/", round(100 * length(ts_test) / n, 2))
+```
+
+```{r}
+head(ts_train, 1)
+tail(ts_train, 1)
+head(ts_test, 1)
+tail(ts_test, 1)
 ```
 
 A key consideration before modeling is whether the series should be transformed. Common transformations include logarithmic scaling or differencing to stabilize variance or achieve stationarity. This decision will be guided by visual inspection and formal statistical tests.
