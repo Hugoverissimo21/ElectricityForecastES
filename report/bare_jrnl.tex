@@ -125,19 +125,82 @@ Assim, a série transformada é considerada estacionária para qualquer nível d
 
 \section{Propostas de Modelos}
 
-
-
- (SARIMA type and/or ETS model and/or GARCH model):
-
-
+Com o objetivo de modelar e prever o consumo mensal de eletricidade em Espanha, serão considerados vários modelos clássicos de séries temporais, nomeadamente modelos SARIMA, GARCH, ETS e STLM. Cada abordagem será avaliada prioritariamente com base na validade dos pressupostos estatísticos subjacentes. Apenas no caso de essa validação ser bem-sucedida, será então considerado o seu desempenho preditivo em dados de teste, assegurando que a capacidade de previsão não compromete a consistência do modelo.
 
 \subsection{SARIMA}
 
-Box  Jenkins methodology if SARIMA models; this includes model identification,
-parameter estimation, diagnostic evaluation (parameters correlation,
-parameters significance, residual analysis).
+Dado que o modelo SARIMA permite incorporar explicitamente as diferenciações de primeira ordem e sazonal ($d = D = 1$), será seguida uma abordagem dual para a sugestão dos parâmetros: por um lado, a análise da ACF e da PACF da série diferenciada orientará a escolha inicial das ordens dos componentes autorregressivos e de médias móveis, tanto sazonais como não sazonais; por outro lado, será realizada uma seleção sistemática de modelos SARIMA através da comparação do critério de informação corrigido (AICc), testando modelos com e sem imposição prévia das ordens de diferenciação definidas pela análise exploratória. O modelo final será escolhido com base no menor valor de AICc, desde que respeite os pressupostos de adequação estatística.
 
+Assim, foram escolhidos três modelos para uma análise mais detalhada:
 
+\begin{itemize}
+    \item SARIMA(1,1,1)(1,1,1)[12]
+    \item SARIMA(2,0,2)(2,1,0)[12]
+    \item SARIMA(0,1,2)(3,1,0)[12]
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/arima_1.png}
+    \caption{Ajuste dos diferentes SARIMA aos dados de treino.}
+    \label{fig:arima_1}
+\end{figure}
+
+Apesar de todos os modelos aparentarem um bom ajustamento aos dados de treino, como se observa na Fig. \ref{fig:arima_1}, a análise dos resíduos revelou falhas estruturais relevantes. Com base na função de autocorrelação dos resíduos e na aplicação do teste de Ljung-Box, constatou-se a presença de autocorrelação em todos os modelos testados. Tal indício compromete um dos pressupostos fundamentais da modelação SARIMA, a ausência de estrutura nos resíduos, colocando em causa a adequação estatística dos modelos ajustados.
+
+Ainda assim, ao testar diferentes combinações de parâmetros em modelos SARIMA, o modelo SARIMA(1,1,1)(1,1,1)[12] foi o que apresentou resultados mais razoáveis em termos de ajustamento e simplicidade estrutural.
+
+Apesar de o teste de Ljung-Box aplicado aos seus resíduos ter produzido um p-valor de $0.0513$, ligeiramente acima do limiar convencional de 5\%, tal resultado encontra-se num intervalo ambíguo. Embora tecnicamente não se rejeite a hipótese nula de ausência de autocorrelação, a proximidade ao valor crítico sugere cautela na aceitação da adequação do modelo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/arima_2.png}
+    \caption{checkresiduals}
+    \label{fig:arima_2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/arima_3.png}
+    \caption{qqplot}
+    \label{fig:arima_3}
+\end{figure}
+
+Quanto aos restantes pressupostos, através das Fig.~\ref{fig:arima_2} e \ref{fig:arima_3}, bem como dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
+
+Quanto aos parâmetros do modelo SARIMA, os mesmos foram analisados tendo em conta a sua significância estatística e a correlação entre coeficientes. A análise revelou a insignificância do parâmetro sazonal autorregressivo (\textit{sar1}), o que levanta dúvidas sobre a sua contribuição efetiva para o modelo. Adicionalmente, observou-se uma correlação elevada entre os parâmetros autorregressivo e de médias móveis não sazonais (\textit{ar1} e \textit{ma1}), com um coeficiente aproximado de $-0{,}81$. Esta correlação forte pode indicar redundância estrutural no modelo e potenciais problemas de identificação.
+
+Ainda assim, a remoção do parâmetro não significativo e de um dos parâmetros fortemente correlacionados resultou no agravamento da autocorrelação nos resíduos, comprometendo ainda mais a adequação do modelo. Pelo que, apesar das limitações identificadas, optou-se por manter a estrutura completa do modelo SARIMA(1,1,1)(1,1,1)[12], dado ser o compromisso mais aceitável entre qualidade do ajustamento, simplicidade estrutural e cumprimento dos pressupostos essenciais.
+
+\subsection{GARCH}
+
+Tendo em conta a possibilidade de existência de heterocedasticidade condicional, foi testada a presença de efeitos ARCH nos resíduos do modelo SARIMA ajustado (SARIMA(1,1,1)(1,1,1)[12]), recorrendo ao teste de Engle (ARCH-LM) com 12 lags.
+
+O p-valor obtido foi $0.6337$, valor claramente superior aos níveis de significância típicos. Assim, não se rejeita a hipótese nula de ausência de efeitos ARCH, não havendo, portanto, evidência de heterocedasticidade condicional nos resíduos. Por esta razão, considera-se que a modelação GARCH não se justifica neste contexto, sendo descartada como proposta válida para a série em análise.
+
+\subsection{ETS}
+
+Procedeu-se à aplicação de um modelo ETS (Error, Trend, Seasonal), uma abordagem adequada para séries temporais com componentes de tendência e sazonalidade bem definidas. Ao contrário dos modelos SARIMA, os modelos ETS não requerem estacionariedade, o que os torna particularmente úteis em contextos onde a estabilização da série pode distorcer a estrutura subjacente.
+
+O modelo ajustado foi selecionado automaticamente com base no critério AICc, tendo sido escolhido o modelo ETS(M,N,A), ou seja, com erro multiplicativo, sem tendência e com sazonalidade aditiva.
+
+No entanto, a análise dos resíduos revelou autocorrelação significativa. O teste de Ljung-Box aplicado aos resíduos produziu um p-valor de $0.002727$, rejeitando claramente a hipótese nula de ausência de autocorrelação. Dada esta violação de um pressuposto fundamental, conclui-se que os modelos desta família não são adequados para a série em análise e são, por conseguinte, descartados.
+
+\subsection{STLM}
+
+.........
+
+AQUI AQUI AQUI AQUI
+
+https://chatgpt.com/c/6836bbd3-1f34-800f-a323-152ffed38103
+
+Foi também considerado um modelo STLM (Seasonal and Trend decomposition using Loess + ARIMA), que combina a decomposição da série temporal em componentes sazonais e de tendência através de suavização local (Loess), seguida da modelação do componente restante com um modelo ARIMA.
+
+Esta abordagem tem como vantagem permitir um tratamento explícito da sazonalidade, antes de ajustar a estrutura dinâmica residual, o que pode ser útil em séries com sazonalidade complexa ou não linear.
+
+Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente via AICc), a análise dos resíduos indicou ausência de autocorrelação significativa e comportamento globalmente aceitável do modelo. Visualmente, o ajustamento foi competitivo face ao SARIMA e, embora ligeiramente inferior em termos de precisão preditiva, o STLM apresentou resíduos mais regulares e estruturalmente satisfatórios.
+
+Dado o cumprimento dos pressupostos e a estabilidade do comportamento residual, o modelo STLM será considerado como uma alternativa viável ao SARIMA, com vantagem em robustez estrutural, apesar de ligeiras perdas em desempenho preditivo.
 
 
 \section{Future observations forecast}
