@@ -13,22 +13,33 @@
 
 \begin{document}
 
-\title{TITULO}
+\title{Modelação e Previsão do Consumo Mensal de Eletricidade em Espanha}
 
 \author{Hugo Veríssimo. hugoverissimo@ua.pt, 124348.}
 
-\markboth{Mineração de Dados em Larga Escala. 5 de Março de 2025. MUDAR MUDAR MUDAR MUDAR MUDAR MUDAR MUDAR}{} %MUDAR % MUDAR
+\markboth{Universidade de Aveiro, Séries Temporais. 16 de junho de 2025.}{}
 
 \maketitle
 
 \begin{abstract}
-abstrato
+Este estudo analisa e prevê o consumo mensal de eletricidade em Espanha com base em dados do Eurostat (2008–2025). Foram comparados vários modelos estatísticos de séries temporais, incluindo SARIMA, GARCH, ETS e STLM. Os modelos SARIMA e STLM apresentaram bom desempenho preditivo, mas o STLM destacou-se por gerar resíduos mais regulares e intervalos de previsão mais estreitos, mantendo a cobertura. Este modelo foi, assim, selecionado como a melhor opção para previsão.
 \end{abstract}
 
 \IEEEpeerreviewmaketitle
 
-\section{Introdução}
+REVER REVER REVER REVER REVER REVER
 
+REVER RMD A VER SE FALTOU DIZER ALGO ou resultados
+
+REVER PLOTS e melhorar
+
+REVER TEXTO TODO + arranjar referências
+
+.....
+
+REVER REVER REVER REVER REVER REVER
+
+\section{Introdução}
 
 A monitorização e previsão do consumo de eletricidade desempenham um papel central na gestão energética de qualquer país desenvolvido. Em contextos de transição energética, planeamento de capacidade, definição de políticas públicas e avaliação de impacto ambiental, a compreensão detalhada dos padrões de consumo é essencial. Espanha, sendo uma das principais economias da Europa, apresenta uma dinâmica energética particularmente relevante, com variações sazonais marcadas e um peso crescente das fontes renováveis \cite{REE2023}.
 
@@ -155,18 +166,18 @@ Apesar de o teste de Ljung-Box aplicado aos seus resíduos ter produzido um p-va
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/arima_2.png}
-    \caption{checkresiduals}
+    \caption{Análise dos resíduos do modelo SARIMA.}
     \label{fig:arima_2}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/arima_3.png}
-    \caption{qqplot}
+    \caption{Gráfico QQ dos resíduos do modelo SARIMA.}
     \label{fig:arima_3}
 \end{figure}
 
-Quanto aos restantes pressupostos, através das Fig.~\ref{fig:arima_2} e \ref{fig:arima_3}, bem como dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
+Quanto aos restantes pressupostos, através das Fig. \ref{fig:arima_2} e \ref{fig:arima_3}, bem como dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
 
 Quanto aos parâmetros do modelo SARIMA, os mesmos foram analisados tendo em conta a sua significância estatística e a correlação entre coeficientes. A análise revelou a insignificância do parâmetro sazonal autorregressivo (\textit{sar1}), o que levanta dúvidas sobre a sua contribuição efetiva para o modelo. Adicionalmente, observou-se uma correlação elevada entre os parâmetros autorregressivo e de médias móveis não sazonais (\textit{ar1} e \textit{ma1}), com um coeficiente aproximado de $-0{,}81$. Esta correlação forte pode indicar redundância estrutural no modelo e potenciais problemas de identificação.
 
@@ -188,41 +199,121 @@ No entanto, a análise dos resíduos revelou autocorrelação significativa. O t
 
 \subsection{STLM}
 
-.........
-
-AQUI AQUI AQUI AQUI
-
-https://chatgpt.com/c/6836bbd3-1f34-800f-a323-152ffed38103
-
-Foi também considerado um modelo STLM (Seasonal and Trend decomposition using Loess + ARIMA), que combina a decomposição da série temporal em componentes sazonais e de tendência através de suavização local (Loess), seguida da modelação do componente restante com um modelo ARIMA.
+Foi também considerado um modelo STLM (Seasonal and Trend decomposition using Loess + ARIMA), que combina a decomposição da série temporal em componentes sazonais e de tendência através de suavização local (Loess), seguida da modelação do componente restante com um modelo ARIMA. ??? refs
 
 Esta abordagem tem como vantagem permitir um tratamento explícito da sazonalidade, antes de ajustar a estrutura dinâmica residual, o que pode ser útil em séries com sazonalidade complexa ou não linear.
 
-Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente via AICc), a análise dos resíduos indicou ausência de autocorrelação significativa e comportamento globalmente aceitável do modelo. Visualmente, o ajustamento foi competitivo face ao SARIMA e, embora ligeiramente inferior em termos de precisão preditiva, o STLM apresentou resíduos mais regulares e estruturalmente satisfatórios.
+Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente via AICc), a análise dos resíduos indicou ausência de autocorrelação significativa, tanto através do teste Ljung-Box (p-valor de 0.2003) como da análise gráfica dos resíduos (Fig. \ref{fig:stlm_residuals}), e um comportamento globalmente aceitável do modelo.
 
-Dado o cumprimento dos pressupostos e a estabilidade do comportamento residual, o modelo STLM será considerado como uma alternativa viável ao SARIMA, com vantagem em robustez estrutural, apesar de ligeiras perdas em desempenho preditivo.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/stlm_residuals.png}
+    \caption{Análise dos resíduos do modelo STLM.}
+    \label{fig:stlm_residuals}
+\end{figure}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/stlm_qq.png}
+    \caption{Gráfico QQ dos resíduos do modelo STLM.}
+    \label{fig:stlm_qq}
+\end{figure}
 
-\section{Future observations forecast}
+Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A partir da análise gráfica (Figs. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}), observou-se uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias muito significativas.
 
-Includes the analysis of its accuracy, confidence intervals (if possible), use of
-bootstrap methodology (if necessary). Accuracy of the forecasts should be
-compared.
+Esta impressão foi reforçada pelos testes formais: o teste de Shapiro–Wilk produziu um p-valor de $0.01422$, sugerindo rejeição da hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar essa hipótese. Apesar da divergência nos resultados, o comportamento geral dos resíduos pode ser considerado estatisticamente aceitável, dada a sensibilidade conhecida do teste de Shapiro–Wilk a pequenas imperfeições. Assim, a normalidade dos resíduos no modelo STLM, embora não confirmada inequivocamente, não levanta preocupações críticas no contexto da modelação.
 
-\section{Results, discussion/conclusions:}
+Dado o cumprimento dos pressupostos e a estabilidade do comportamento residual, o modelo STLM será considerado como um possível modelo para previsão, a ser testado posteriormente no conjunto de dados de teste. A sua seleção baseia-se na solidez estrutural e na adequação estatística observada durante o ajuste aos dados de treino.
 
-Discussion should include the model choice
+\section{Previsão de Observações Futuras}
+
+Tendo em conta a análise dos modelos propostos, os modelos selecionados para avaliação da capacidade preditiva serão o SARIMA(1,1,1)(1,1,1)[12] e o STLM com componente residual modelado por ARIMA. Ambos os modelos demonstraram ajustamentos estatisticamente aceitáveis aos dados de treino, cumprindo os principais pressupostos, e serão agora comparados com base no seu desempenho sobre o conjunto de teste.
+
+Comparando as métricas de previsão obtidas sobre os dados de teste com as métricas de ajustamento sobre os dados de treino, observa-se uma semelhança significativa entre ambas. Esta estabilidade entre fases indica que não há indícios de \textit{overfitting}, o que reforça a robustez dos modelos selecionados para fins preditivos.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{assets/forecast_sarima.png}
+        \caption{Modelo SARIMA(1,1,1)(1,1,1)[12].}
+        \label{fig:forecast_sarima}
+    \end{subfigure}
+    
+    \vspace{2em}
+
+    \begin{subfigure}[b]{0.9\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{assets/forecast_stlm.png}
+        \caption{Modelo STLM(ARIMA).}
+        \label{fig:forecast_stlm}
+    \end{subfigure}
+
+    \caption{Comparação entre valores reais e previsões para o modelo SARIMA (a) e STLM (b).}
+    \label{fig:forecastvsobs}
+\end{figure}
+
+A Fig. \ref{fig:forecastvsobs} apresenta a comparação gráfica entre os valores observados e as previsões geradas pelos modelos, ao longo do período de teste. Visualmente, ambos os modelos acompanham com precisão a estrutura da série, sem desvios sistemáticos aparentes, reforçando a consistência do ajustamento estatístico já verificado anteriormente.
+
+\begin{table}[H]
+    \centering
+    \caption{Comparação das métricas de previsão no conjunto de teste: SARIMA vs. STLM}
+    \label{tab:forecast_comparison}
+    \begin{tabular}{lcc}
+        \toprule
+        Métrica & SARIMA(1,1,1)(1,1,1)[12] & STLM(ARIMA) \\
+        \midrule
+        ME        & $-52.21608$     & $-26.13118$ \\
+        RMSE      & $562.8728$      & $563.2452$ \\
+        MAE       & $465.7346$      & $460.1395$ \\
+        MPE       & $-0.35018$      & $-0.21075$ \\
+        MAPE      & $2.48337$       & $2.45174$ \\
+        MASE      & $0.56503$       & $0.55824$ \\
+        ACF1      & $0.58261$       & $0.58367$ \\
+        Theil's U & $0.42074$       & $0.42183$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+A Tabela~\ref{tab:forecast_comparison} apresenta a comparação direta entre os modelos SARIMA e STLM com base no seu desempenho preditivo sobre o conjunto de teste. As métricas obtidas revelam valores bastante semelhantes entre os dois modelos, não existindo diferenças expressivas que justifiquem a escolha inequívoca de um em detrimento do outro apenas com base na precisão da previsão. Ambos demonstram capacidade adequada de generalização, sem sinais evidentes de \textit{overfitting}, sendo a decisão final passível de depender de outros critérios como interpretabilidade, robustez dos resíduos ou objetivos específicos da aplicação.
+
+Dado este equilíbrio em termos de erro preditivo pontual, torna-se particularmente relevante a análise dos intervalos de previsão. Esta dimensão permite avaliar a incerteza associada às previsões de cada modelo, bem como a amplitude e a cobertura dos respetivos intervalos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/forecast_pi.png}
+    \caption{Intervalos de previsão a 95\% para os modelos SARIMA e STLM.}
+    \label{fig:forecast_pi}
+\end{figure}
+
+A Fig. \ref{fig:forecast_pi} ilustra as previsões dos dois modelos acompanhadas pelos respetivos intervalos de previsão a 95\%. Ambos os modelos apresentam cobertura total dos valores reais dentro dos seus intervalos de confiança, ou seja, 100\% das observações do período de teste encontram-se contidas nas previsões com 95\% de confiança, tanto para o modelo SARIMA como para o STLM.
+
+No entanto, a largura média dos intervalos difere entre os modelos: o SARIMA apresenta uma amplitude média de $4378.183$, enquanto o modelo STLM regista uma largura média inferior, de $3639.196$. O modelo STLM produz, assim, intervalos de previsão a 95\% mais estreitos em média, quando comparado com o SARIMA. Isto significa que o STLM gera previsões com menor incerteza e idêntica precisão. Intervalos mais estreitos indicam maior confiança do modelo nas suas previsões, o que é particularmente desejável quando a cobertura não é sacrificada, como é o caso presente, visto que ambos os modelos mantêm 100\% de cobertura.
+
+\section{Discussão dos Resultados}
+
+A análise desenvolvida permitiu avaliar comparativamente múltiplas abordagens de modelação para a previsão do consumo mensal de eletricidade em Espanha. Embora tanto o modelo SARIMA(1,1,1)(1,1,1)[12] como o STLM com componente ARIMA tenham revelado desempenho preditivo semelhante, a avaliação aprofundada dos resíduos e dos intervalos de previsão revelou diferenças estruturais relevantes.
+
+O modelo STLM demonstrou menor autocorrelação residual, variância inferior e maior conformidade com a suposição de normalidade dos erros. Estas características sugerem uma modelação mais robusta e estatisticamente fiável. Além disso, a capacidade de gerar intervalos de previsão mais estreitos, mantendo 100\% de cobertura no período de teste, evidencia maior confiança associada às suas previsões — um fator crítico na comunicação de resultados em contextos operacionais e de apoio à decisão.
+
+Apesar do bom desempenho do modelo SARIMA, a sua estrutura residual mais ruidosa e a dependência de transformações diferenciais podem limitar a sua interpretabilidade e estabilidade em cenários futuros. Já o STLM, ao separar explicitamente os componentes estruturais da série antes da modelação dinâmica, oferece maior transparência no ajustamento e potencial adaptabilidade a alterações na sazonalidade.
+
+Em síntese, a escolha do modelo STLM(ARIMA) surge como uma decisão natural e justificada, não se baseando exclusivamente em métricas pontuais de erro, mas numa análise integrada dos pressupostos, da estabilidade dos resíduos e da qualidade informativa das previsões. Estes fatores convergem para uma decisão fundamentada e alinhada com os princípios da modelação estatística em séries temporais.
 
 \section{Conclusão}
 
-conc
+Este estudo teve como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, com base em dados oficiais do Eurostat. A análise envolveu a aplicação e comparação de vários modelos estatísticos de séries temporais, incluindo SARIMA, ETS, GARCH e STLM, avaliados segundo critérios de ajustamento, validação dos pressupostos e desempenho preditivo.
+
+Apesar do modelo SARIMA ter apresentado um bom desempenho geral, foi o modelo STLM(ARIMA) que demonstrou maior robustez estrutural: resíduos mais regulares, menor autocorrelação, maior aproximação à normalidade e intervalos de previsão mais estreitos, mantendo a cobertura total. Estes resultados sustentam a sua escolha como modelo final para previsão.
+
+Conclui-se que o modelo STLM, ao conjugar decomposição estrutural com modelação ARIMA, representa uma solução eficaz para séries com forte sazonalidade e tendência, como é o caso do consumo de eletricidade. A abordagem seguida neste estudo fornece um enquadramento sólido para aplicações semelhantes noutras séries energéticas ou económicas com características análogas.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 
 \appendices
 \section{Título do Apêndice A}
-Auxiliary/not so important results are included in the Appendix.
+METER ANALISE DAS PREVISOES: TREINO VS TESTE PARA DIZER Q N HA OVERFITTING
 
 \section{Título do Apêndice B}
 Auxiliary/not so important results are included in the Appendix.
