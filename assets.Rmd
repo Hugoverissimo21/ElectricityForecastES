@@ -1,0 +1,1022 @@
+---
+title: "ST01: Monthly electricity consumption in Spain"
+author: "Hugo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(forecast)
+library(urca)
+library(lmtest)
+library(tseries)
+library(astsa)
+library(FinTS)
+library(Metrics)
+library(ggplot2)
+```
+
+# Data Loading and Preparation
+
+Read the data from the Excel file.
+
+```{r}
+data <- suppressMessages(read_excel("data.xlsx", col_names = FALSE))
+
+df <- as.data.frame(t(data))
+colnames(df) <- c("Date", "Spain")
+
+df <- df %>%
+  filter(!is.na(Date)) %>%
+  slice(-1) %>%
+  mutate(Date = as.Date(paste(Date, "01", sep = "-"), format = "%Y-%m-%d"),
+         Spain = round(as.numeric(Spain), 3))
+
+rownames(df) <- df$Date
+df$Date <- NULL
+
+head(df, 3)
+
+tail(df, 3)
+```
+
+The dataset should be checked for any missing values:
+
+```{r}
+any(is.na(df))
+```
+
+```{r}
+# from 2008-1 to 2025-2
+
+(12*(24-8+1) + 2) - nrow(df)
+```
+
+Since there is no missing data, the variable can be converted to a time series object to enable proper temporal analysis and model fitting.
+
+```{r}
+ts_data <- ts(df$Spain, start = c(2008, 1), frequency = 12)
+```
+
+# Exploratory Data Analysis
+
+Number of observations:
+
+```{r}
+length(ts_data)
+```
+
+Time series plot:
+
+```{r}
+library(ggplot2)
+
+# Convert ts_data to data.frame for ggplot
+df <- data.frame(
+  date = as.Date(time(ts_data)),
+  value = as.numeric(ts_data)
+)
+
+# Create ggplot
+p <- ggplot(df, aes(x = date, y = value)) +
+  geom_line() +
+  labs(
+    title = "Consumo Elétrico Mensal em Espanha",
+    x = "Tempo (Mensal)",
+    y = "Consumo de Eletricidade (GWh)"
+  ) +
+  theme_minimal()
+
+# Display
+print(p)
+
+ggsave("assets/timeseries.png", plot = p, bg = "transparent", width = 7, height = 4, units = "in", dpi = 300)
+
+```
+
+Main observations from the time series plot:
+
+- Clear seasonal pattern with regular annual cycles
+
+- Variance appears stable (no visible heteroscedasticity)
+
+- Mild downward trend over time
+
+- No visible level shifts or structural breaks
+
+For the remaining exploratory analysis, the dataset should already be split into training and test sets to ensure that model diagnostics are performed only on the training portion.
+
+$$20\% \text{ of } 206 \approx 40$$
+
+```{r}
+n <- length(ts_data)
+
+# train: end before last 40 obs
+ts_train <- window(ts_data, end = time(ts_data)[n - 40])
+
+# test: start at the last 40 obs
+ts_test <- window(ts_data, start = time(ts_data)[n - 39])
+
+cat("Train data has", length(ts_train), "obervations.\n")
+cat("Test data has", length(ts_test), "obervations.\n")
+
+cat("Split proportion:", round(100 * length(ts_train) / n, 2),
+    "/", round(100 * length(ts_test) / n, 2), "\n")
+
+cat("Train starts at", start(ts_train), "and ends at", end(ts_train), "\n")
+cat("Test starts at", start(ts_test), "and ends at", end(ts_test), "\n")
+```
+
+```{r}
+library(ggplot2)
+
+# Extrair datas e valores
+df_train <- data.frame(
+  date = as.Date(time(ts_train)),
+  value = as.numeric(ts_train),
+  set = "Treino"
+)
+
+df_test <- data.frame(
+  date = as.Date(time(ts_test)),
+  value = as.numeric(ts_test),
+  set = "Teste"
+)
+
+df_all <- rbind(df_train, df_test)
+
+# Plot com ggplot2
+p <- ggplot(df_all, aes(x = date, y = value, color = set)) +
+  geom_line() +
+  labs(
+    title = "Consumo Elétrico Mensal em Espanha: Teste e Treino",
+    x = "Tempo (Mensal)",
+    y = "Consumo de Eletricidade (GWh)",
+    color = "Conjunto"
+  ) +
+  theme_minimal()
+
+# Mostrar
+print(p)
+
+ggsave("assets/split.png", plot = p, bg = "transparent", width = 7, height = 4, units = "in", dpi = 300)
+
+```
+
+
+A key consideration before modeling is whether the series should be transformed. Common transformations include logarithmic scaling or differencing to stabilize variance or achieve stationarity. This decision will be guided by visual inspection and formal statistical tests.
+
+## Heteroscedasticity
+
+Using the Breusch-Pagan test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Constant variance (homoscedasticity)} \\
+\text{H}_1\!:& \quad \text{Non-constant variance (heteroscedasticity)}
+\end{aligned}
+$$
+
+
+```{r}
+# prepare the data
+df <- data.frame(
+  time = time(ts_train),
+  value = as.numeric(ts_train)
+)
+
+# apply the test
+model <- lm(value ~ time, data = df)
+
+bptest(model)
+```
+
+The Breusch-Pagan test yields a p-value of 0.5541. Since the p-value is substantially greater than conventional significance levels (e.g., 0.05), there is no evidence to reject the null hypothesis. The residuals do not exhibit significant heteroscedasticity; the assumption of constant variance holds.
+
+
+Nonetheless, a Box-Cox transformation can still be applied to evaluate whether variance stabilization is noticeable or not.
+
+
+```{r, fig.height=10}
+png("assets/boxcox.png", width = 7, height = 9, units = "in", res = 300, bg = "transparent")
+
+par(mfrow = c(2, 1))
+
+plot(df$value, 
+     main = "Dados Originais", 
+     ylab = "Original",
+     xlab = "Tempo", 
+     type = "l")
+
+lambda <- BoxCox.lambda(df$value)
+plot(BoxCox(df$value, lambda), 
+     main = paste("Transformação de Box-Cox (λ =", round(lambda, 2), ")"),
+     ylab = "Transformado", 
+     xlab = "Tempo", 
+     type = "l")
+
+dev.off()
+
+```
+
+Since the Box-Cox transformation does not produce a noticeable difference in the variance structure and the Breusch-Pagan test indicated homoscedasticity, no transformation will be applied to the original series.
+
+## Stationarity
+
+As a first step, the ACF and PACF plots of the training series will be examined to assess temporal dependence and identify potential signs of non-stationarity, such as slow decay in autocorrelations. These plots help reveal if differencing may be required before model estimation.
+
+```{r}
+png("assets/timeseries_diag1.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+
+tsdisplay(ts_train, main = "Diagnóstico da Série Temporal")
+dev.off()
+```
+
+The time series plot and the ACF reveal strong autocorrelations that decay slowly, indicating the presence of persistent structure over time. The PACF also shows significant early lags. These patterns are characteristic of a non-stationary series, suggesting that differencing is likely required before fitting a model.
+
+```{r}
+png("assets/timeseries_diag2.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+tsdisplay(diff(ts_train, lag = 12), main = "Diagnóstico após diferenciação sazonal (lag = 12)")
+dev.off()
+```
+
+```{r}
+png("assets/timeseries_diag3.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+tsdisplay(diff(diff(ts_train), lag = 12), main = "Diferenciação sazonal (lag = 12) e primeira diferenciação (lag = 1)")
+dev.off()
+```
+
+After applying both seasonal differencing (lag = 12) and first differencing, the transformed series appears substantially more stable. The ACF shows a rapid drop-off, and most lags lie within the confidence bounds. The PACF displays limited significant spikes, further supporting stationarity. These patterns suggest that the combined differencing successfully removed trend and seasonal components, resulting in a stationary series.
+
+To draw a more robust inference regarding stationarity, formal statistical tests should be applied in addition to visual inspection. Specifically, the Augmented Dickey-Fuller (ADF) and KPSS tests will be used to assess the presence or absence of unit roots.
+
+Augmented Dickey-Fuller (ADF) test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{The series has a unit root (non-stationary)} \\
+\text{H}_1\!:& \quad \text{The series is stationary}
+\end{aligned}
+$$
+
+
+```{r}
+# test the original series, probably non-stationary
+adf.test(ts_train)
+
+# test after first differencing and seasonal differencing
+adf.test(diff(diff(ts_train, lag = 12), differences = 1))
+```
+
+The ADF test on the original series returns a p-value of 0.1572. This is above the conventional threshold (e.g., 0.05), so there is insufficient evidence to reject the null hypothesis. The original series is likely non-stationary.
+
+After applying seasonal and first differencing, the ADF test yields a p-value less than 0.01. This provides strong evidence against the null hypothesis, indicating that the differenced series is stationary.
+
+KPSS test:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{The series is stationary} \\
+\text{H}_1\!:& \quad \text{The series has a unit root (non-stationary)}
+\end{aligned}
+$$
+
+```{r}
+kpss_test <- ur.kpss(diff(diff(ts_train, lag = 12)))
+summary(kpss_test)
+```
+
+The KPSS test was performed on the differenced series (type = "mu", with 4 lags). The test statistic is 0.0199, which is well below all critical values at common significance levels (e.g., 0.463 at 5%). Since the test statistic does not exceed the critical values, the null hypothesis of stationarity cannot be rejected. This test supports the conclusion that the differenced series is stationary, reinforcing the result from the ADF test.
+
+This concludes that the original series is non-stationary, but stationarity is achieved after applying one seasonal and one regular differencing.
+
+# Model Proposals
+
+## SARIMA
+
+From the exploratory analysis section, it is already established that the series exhibits strong seasonality and required both seasonal and non-seasonal differencing to achieve stationarity. This justifies the use of a SARIMA model, which explicitly accounts for both seasonal and non-seasonal components.
+
+Model identification will proceed by analyzing the ACF and PACF of the differenced series and by evaluating alternative specifications using information criteria (e.g., AICc) and residual diagnostics.
+
+```{r}
+png("assets/arima_acf2.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+acf2(diff(diff(ts_train, 12)))
+dev.off()
+```
+
+From the ACF and PACF plots of the seasonally and first-differenced series (`diff(diff(ts_train, 12))`), the following model components can be inferred:
+
+Seasonal components (period = 12)
+
+- ACF shows a clear spike at lag 12, suggesting a seasonal MA(1) component.
+- PACF also shows a spike at lag 12, supporting the inclusion of a seasonal AR(1) term.
+- Seasonal differencing was already applied, so D = 1.
+
+Non-seasonal components
+
+- ACF shows a rapid decay after lag 1, with only the first autocorrelation clearly significant — consistent with a non-seasonal MA(1) structure.
+- PACF shows a significant spike at lag 1 and quick cutoff — suggesting a non-seasonal AR(1) is also plausible.
+- Regular differencing was applied, so d = 1.
+
+SARIMA(1,1,1)(1,1,1)[12] is a reasonable model candidate based on these diagnostics.
+
+```{r}
+fit <- auto.arima(ts_train,
+                  ic = "aicc",
+                  seasonal = TRUE,
+                  stepwise = TRUE, 
+                  approximation = TRUE)
+summary(fit)
+```
+
+SARIMA(2,0,2)(2,1,0)[12] with drift is also a reasonable model candidate based on `auto.arima`.
+
+```{r}
+fit <- auto.arima(ts_train,
+                  ic = "aicc",
+                  max.p = 5,
+                  d = 1,
+                  max.q = 5,
+                  max.P = 3,
+                  D = 1,
+                  max.Q = 3,
+                  seasonal = TRUE,
+                  stepwise = FALSE, 
+                  approximation = FALSE)
+summary(fit)
+```
+
+SARIMA(0,1,2)(3,1,0)[12] is also a reasonable model candidate based on a more custom `auto.arima`.
+
+To identify the optimal SARIMA model, a grid search can also be performed (a more custom `auto.arima`), over a range of seasonal and non-seasonal parameters. Each model is evaluated using AICc, which balances fit and complexity. This approach allows for a systematic comparison of candidate models, guided by penalized likelihood. While it increases the risk of overfitting due to the large number of combinations, safeguards are applied—such as restricting the total number of parameters—to limit model complexity.
+
+```{.r}
+# full grid search
+grid <- expand.grid(p = 0:5,
+                    d = 0:2,
+                    q = 0:5,
+                    P = 0:5,
+                    D = 1:3,
+                    Q = 0:5)
+
+# filtered grid search
+grid <- subset(grid, (p + q + P + Q) <= 7)
+
+# model fitting and evaluation
+results <- lapply(seq_len(nrow(grid)), function(i) {
+  row <- grid[i, ]
+  model_str <- paste0("(", row$p, ",", row$d, ",", row$q, ")(",
+                      row$P, ",", row$D, ",", row$Q, ")[12]")
+  if (i %% 100 == 0 || i == 1 || i == nrow(grid)) {
+    cat(sprintf("[STATUS] At model %d of %d: %s\n", i, nrow(grid), model_str))
+  }  
+  tryCatch({
+    fit <- Arima(ts_train,
+             order = c(row$p, row$d, row$q),
+             seasonal = list(order = c(row$P, row$D, row$Q), period = 12),
+             include.drift = FALSE)
+    data.frame(aicc = fit$aicc, model = model_str)
+  }, error = function(e) {
+      cat(sprintf("[ERROR] In model %d of %d: %s -> %s\n", i, nrow(grid), model_str, e$message))
+    NULL
+  })
+})
+
+# remove failed models
+results <- Filter(Negate(is.null), results)
+
+# save the sorted results
+results_df <- do.call(rbind, results)
+results_df <- results_df[order(results_df$aicc), ]
+write.csv(results_df, "results.csv", row.names = FALSE)
+```
+
+```{r}
+results_df <- read.csv("results.csv")
+head(results_df, 3)
+```
+
+
+Current candidates for the optimal SARIMA model:
+
+- SARIMA(1,1,1)(1,1,1)[12]
+
+- SARIMA(2,0,2)(2,1,0)[12]
+
+- SARIMA(0,1,2)(3,1,0)[12]
+
+- SARIMA(1,2,2)(0,3,3)[12]
+
+```{r, fig.width=10}
+png("assets/arima_fits.png", width = 7, height = 5, units = "in", res = 300, bg = "transparent")
+
+models <- list(
+  list(order = c(1,1,1), seasonal = c(1,1,1)),
+  list(order = c(2,0,2), seasonal = c(2,1,0)),
+  list(order = c(0,1,2), seasonal = c(3,1,0)))
+
+labels <- c("SARIMA(1,1,1)(1,1,1)[12]",
+            "SARIMA(2,0,2)(2,1,0)[12]",
+            "SARIMA(0,1,2)(3,1,0)[12]")
+
+plot(ts_train, type = "l", col = "black", lwd = 1.5,
+     main = "Valores Ajustados dos Modelos SARIMA vs Dados de Treino",
+     ylab = "Consumo de Eletricidade", xlab = "Tempo")
+
+colors <- c("blue", "red", "darkgreen")
+
+for (i in seq_along(models)) {
+  fit <- Arima(ts_train,
+               order = models[[i]]$order,
+               seasonal = list(order = models[[i]]$seasonal, period = 12))
+  lines(fitted(fit), col = colors[i], lwd = 1.5)
+}
+
+legend("bottomleft",
+       legend = c("Observações", labels),
+       col = c("black", colors),
+       lty = 1,
+       lwd = 1.5)
+dev.off()
+```
+
+
+Based on the visual alignment of fitted values with the observed training data and considering model complexity, the most favorable choices are:
+
+1. SARIMA(1,1,1)(1,1,1)[12]
+
+2. SARIMA(2,0,2)(2,1,0)[12]
+
+3. SARIMA(0,1,2)(3,1,0)[12]
+
+Evaluation of the First Choice: SARIMA(1,1,1)(1,1,1)[12]
+
+```{r}
+sarima1 <- forecast::Arima(ts_train,
+                           order = c(1,1,1),
+                           seasonal = c(1,1,1))
+```
+
+```{r}
+summary(sarima1)
+```
+```{r}
+# TRUE if significantly different from zero (all should be)
+0.0579 / 0.0894 >= 1.96
+```
+
+`sar1` is not significant!
+
+```{r}
+# correlation between parameters (should be <.7)
+vcov_mat <- vcov(sarima1)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+
+```{r}
+png("assets/sarima1_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(sarima1)
+dev.off()
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima1)), "and variance", var(residuals(sarima1)))
+```
+
+```{r}
+png("assets/sarima1_qqplot.png", width = 7, height = 4, units = "in", res = 300, bg = "transparent")
+qqnorm(residuals(sarima1), main = "Q-Q Plot dos Resíduos do SARIMA(1,1,1)(1,1,1)[12]")
+qqline(residuals(sarima1))
+dev.off()
+```
+
+Evaluation of the Second Choice: SARIMA(2,0,2)(2,1,0)[12]
+
+```{r}
+sarima2 <- forecast::Arima(ts_train,
+                           order = c(2,0,2),
+                           seasonal = c(2,1,0))
+```
+
+```{r}
+summary(sarima2)
+```
+
+```{r}
+0.0659 / 0.0940 >= 1.96
+```
+
+`ar2` is not significant!
+
+```{r}
+vcov_mat <- vcov(sarima2)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+```{r}
+png("assets/sarima2_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(sarima2)
+dev.off()
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima2)), "and variance", var(residuals(sarima2)))
+```
+
+```{r}
+png("assets/sarima2_qqplot.png", width = 7, height = 4, units = "in", res = 300, bg = "transparent")
+qqnorm(residuals(sarima2), main = "Q-Q Plot dos Resíduos do SARIMA(2,0,2)(2,1,0)[12]")
+qqline(residuals(sarima2))
+dev.off()
+```
+
+Evaluation of the Third Choice: SARIMA(0,1,2)(3,1,0)[12]
+
+```{r}
+sarima3 <- forecast::Arima(ts_train,
+                           order = c(0,1,2),
+                           seasonal = c(3,1,0))
+```
+
+```{r}
+summary(sarima3)
+```
+
+They are all significant!
+
+```{r}
+vcov_mat <- vcov(sarima3)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+No significant correlation.
+
+```{r}
+png("assets/sarima3_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(sarima3)
+dev.off()
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(sarima3)), "and variance", var(residuals(sarima3)))
+```
+
+```{r}
+png("assets/sarima3_qqplot.png", width = 7, height = 4, units = "in", res = 300, bg = "transparent")
+qqnorm(residuals(sarima3), main = "Q-Q Plot dos Resíduos do SARIMA(0,1,2)(3,1,0)[12]")
+qqline(residuals(sarima3))
+dev.off()
+```
+
+Since no model fully satisfied the diagnostic criteria for a well-specified model (namely, uncorrelated, homoscedastic, and normally distributed residuals), further tuning is necessary.
+
+After extensive testing of alternative SARIMA specifications and parameter adjustments, this was the best-performing configuration identified based on diagnostic criteria and overall model adequacy.
+
+```{r}
+fit_arima <- forecast::Arima(ts_train,
+                           order = c(1,1,1),
+                           seasonal = c(1,1,1))
+
+summary(fit_arima)
+```
+
+```{r}
+vcov_mat <- vcov(fit_arima)
+stddevs <- sqrt(diag(vcov_mat))
+
+cov2cor(vcov_mat)
+```
+
+```{r}
+png("assets/sarima_fit_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(fit_arima)
+dev.off()
+```
+
+```{r}
+cat("The residuals have mean", mean(residuals(fit_arima)), "and variance", var(residuals(fit_arima)))
+```
+
+```{r}
+png("assets/sarima_fit_qqplot.png", width = 7, height = 4, units = "in", res = 300, bg = "transparent")
+qqnorm(residuals(fit_arima), main = "Q-Q Plot dos Resíduos do SARIMA(1,1,1)(1,1,1)[12]")
+qqline(residuals(fit_arima))
+dev.off()
+```
+
+```{r}
+# Shapiro-Wilk test
+shapiro.test(residuals(fit_arima))
+
+# Kolmogorov–Smirnov test
+ks.test(residuals(fit_arima), "pnorm", mean=mean(residuals(fit_arima)), sd=sd(residuals(fit_arima)))
+```
+
+Even though the `sar1` coefficient is individually insignificant and `ar1` shows correlation with `ma1`, both contribute meaningfully to whitening the residuals. Their inclusion reduces autocorrelation not accounted for by other components. In time series modeling, residual diagnostics take precedence over individual parameter significance, and retaining such terms is justified when they improve the overall model adequacy.
+
+The residual diagnostics for the model show reasonably good behavior:
+
+- The residuals appear centered with no visible trend or structural shift.
+
+- The ACF plot shows no significant autocorrelation at most lags.
+
+- The histogram indicates approximate symmetry and bell-shaped distribution.
+
+- The Ljung-Box test result is:
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{No autocorrelation in residuals} \\
+\text{H}_1\!:& \quad \text{Residuals are autocorrelated}
+\end{aligned}
+$$
+
+
+p-value is 0.0513, slightly above the 5% significance level, indicating marginal evidence against the null hypothesis. While not entirely conclusive, this suggests that the residuals are likely uncorrelated, or at least that any remaining autocorrelation is weak.
+
+Normality of the residuals was evaluated using both the Shapiro-Wilk and Kolmogorov-Smirnov tests, along with visual inspection via the Q-Q plot.
+
+- Shapiro-Wilk test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals are normally distributed} \\
+\text{H}_1\!:& \quad \text{Residuals deviate from normality}
+\end{aligned}
+$$
+
+p-value = 0.005097: Rej. H0: Some evidence of non-normality.
+
+- Kolmogorov-Smirnov test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals follow the normal distribution} \\
+\text{H}_1\!:& \quad \text{Residuals do not follow the normal distribution}
+\end{aligned}
+$$
+
+p-value = 0.1969: Fail to reject H0: no significant evidence of non-normality.
+
+This difference arises because the Shapiro-Wilk test is more robust against non-normality, particularly for skewed distributions and in small samples. The Kolmogorov-Smirnov test, on the other hand, is more conservative and may fail to reject the null hypothesis for non-normal data, especially in small samples. 
+
+- Q-Q plot
+
+Shows tail deviations but an overall "acceptable" alignment with the theoretical normal distribution.
+
+While the Shapiro-Wilk test suggests a deviation from normality, the K-S test and graphical analysis "support" the assumption of approximate normality.
+
+
+The SARIMA(1,1,1)(1,1,1)[12] model produces residuals that are close enough to white noise, with weak autocorrelation and only mild deviations from normality. Although not perfect, the model satisfies most diagnostic criteria to a reasonable extent. In the absence of clearly superior alternatives, this model may be considered adequate for forecasting purposes.
+
+## GARCH
+
+Having identified the best-fitting ARIMA model, the next step is to test whether a GARCH model is appropriate for capturing any remaining conditional heteroscedasticity in the residuals.
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{No ARCH effects (homoscedasticity)} \\
+\text{H}_1\!:& \quad \text{Presence of ARCH effects (heteroscedasticity)}
+\end{aligned}
+$$
+
+```{r}
+ArchTest(residuals(fit_arima), lags = 12)
+```
+
+The test returned a p-value of 0.6337. As the p-value is well above common significance levels, we fail to reject the null hypothesis. There is no evidence of ARCH effects in the residuals; a GARCH extension is not required.
+
+## ETS
+
+An ETS model will now be applied. ETS models are well-suited for time series with strong trend and seasonal components, and unlike ARIMA, they do not require stationarity. This alternative approach will allow for comparison in terms of both in-sample fit and forecasting accuracy. Model components (Error, Trend, Seasonal) are selected automatically based on information criteria.
+
+```{r}
+fit_ets <- ets(ts_train, ic="aicc")
+summary(fit_ets)
+```
+
+The ETS model selected based on AICc is: ETS(M,N,A)
+
+This configuration indicates:
+
+- Error: Multiplicative: the impact of random shocks scales with the level of the series
+
+- Trend: None: no long-term directional movement is modeled
+
+- Seasonality: Additive: seasonal fluctuations are constant in magnitude across time
+
+This model structure reflects a stable seasonal pattern without an explicit trend, consistent with the behavior observed after differencing the original series.
+
+```{r}
+png("assets/ets_fit_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(fit_ets)
+dev.off()
+```
+
+By applying the `checkresiduals` function to the model, it becomes evident that the residuals display significant autocorrelation, as confirmed by the Ljung-Box test (p-value = 0.0027). The residual diagnostics indicate that the ETS model does not adequately capture the underlying dynamics of the series.
+
+The ETS framework already encompasses the Holt-Winters family of models as special cases, so they will not be tested separately.
+
+## STLM
+
+The next approach involves applying a Seasonal and Trend decomposition using Loess (STL), followed by modeling the seasonally adjusted series. This method, implemented via the `stlm()` function, decomposes the original series into trend, seasonal, and remainder components in a flexible, nonparametric way. After decomposition, the remainder is modeled using ARIMA or ETS, allowing for a hybrid structure that combines non-linear seasonal smoothing with parametric short-term dynamics.
+
+```{r}
+fit_stlm <- stlm(ts_train,
+                 s.window = "periodic",
+                 method = "arima")
+
+summary(fit_stlm)
+```
+```{r, fig.height=7}
+# STL components (seasonal, trend, remainder)
+png("assets/stlm_stl_decomposition.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+plot(fit_stlm$stl, main = "Decomposição STLM do Consumo Elétrico")
+dev.off()
+
+```
+
+```{r}
+# ARIMA fitted to the seasonally adjusted series (?)
+summary(fit_stlm$model)
+```
+
+```{r}
+png("assets/stlm_fit_residuos.png", width = 7, height = 6, units = "in", res = 300, bg = "transparent")
+checkresiduals(fit_stlm)
+dev.off()
+```
+
+The residual diagnostics from the model show a relatively well-behaved structure:
+
+- The residual time plot displays no obvious patterns or structural deviations.
+
+- The ACF of the residuals remains mostly within the confidence bounds, with no strong autocorrelation.
+
+- The histogram suggests approximate symmetry, though some deviation from normality is visible.
+
+- The Ljung-Box test confirms the absence of significant autocorrelation
+
+```{r}
+cat("The residuals have mean", mean(residuals(fit_stlm)), "and variance", var(residuals(fit_stlm)))
+```
+
+```{r}
+png("assets/stlm_fit_qqplot.png", width = 7, height = 4, units = "in", res = 300, bg = "transparent")
+qqnorm(residuals(fit_stlm), main = "Q-Q Plot dos Resíduos do STLM(ARIMA)")
+qqline(residuals(fit_stlm))
+dev.off()
+```
+
+```{r}
+# Shapiro-Wilk test
+shapiro.test(residuals(fit_stlm))
+
+# Kolmogorov–Smirnov test
+ks.test(residuals(fit_stlm), "pnorm", mean=mean(residuals(fit_stlm)), sd=sd(residuals(fit_stlm)))
+```
+
+Normality of the residuals was evaluated using both the Shapiro-Wilk and Kolmogorov-Smirnov tests, along with visual inspection via the Q-Q plot.
+
+- Shapiro-Wilk test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals are normally distributed} \\
+\text{H}_1\!:& \quad \text{Residuals deviate from normality}
+\end{aligned}
+$$
+
+p-value = 0.01422: ~Rej. H0 (depends on 1% or 5%): Some evidence of non-normality.
+
+- Kolmogorov-Smirnov test
+
+$$
+\begin{aligned}
+\text{H}_0\!:& \quad \text{Residuals follow the normal distribution} \\
+\text{H}_1\!:& \quad \text{Residuals do not follow the normal distribution}
+\end{aligned}
+$$
+
+p-value = 0.3263: Fail to reject H0: no significant evidence of non-normality.
+
+This difference arises because the Shapiro-Wilk test is more robust against non-normality, particularly for skewed distributions and in small samples. The Kolmogorov-Smirnov test, on the other hand, is more conservative and may fail to reject the null hypothesis for non-normal data, especially in small samples. 
+
+- Q-Q plot
+
+Shows minor tail deviations but an overall acceptable alignment with the theoretical normal distribution.
+
+While the Shapiro-Wilk test suggests a slight deviation from normality, the K-S test and graphical analysis support the assumption of approximate normality. This level of deviation is not sufficient to disqualify the model for practical use.
+
+# Future Observations Forecast
+
+To generate forecasts for future electricity consumption, the two best-performing models from the analysis will be used:
+
+```{.r}
+fit_arima   # SARIMA(1,1,1)(1,1,1)[12]
+fit_stlm    # STLM(ARIMA)
+```
+
+Forecast accuracy and behavior will be compared visually and numerically using the held-out test set.
+
+## SARIMA(1,1,1)(1,1,1)[12] 
+
+```{r}
+library(ggplot2)
+library(forecast)
+
+# forecast
+arima_forecast <- forecast(fit_arima, h = length(ts_test))
+
+# avaliação
+forecast::accuracy(arima_forecast, ts_test)
+
+# plot 1: série completa vs previsão
+p1 <- autoplot(ts_data, series = "Observado") +
+  autolayer(arima_forecast, series = "Previsão", PI = FALSE) +
+  labs(title = "Previsão vs Série Completa - SARIMA(1,1,1)(1,1,1)[12]",
+       x = "Tempo (Mensal)",
+       y = "Consumo de Eletricidade (GWh)") +
+  scale_colour_manual(values = c("Observado" = "black", "Previsão" = "blue")) +
+  theme_minimal()
+
+ggsave("assets/forecast_sarima1.png", plot = p1, width = 7, height = 4, units = "in", dpi = 300, bg = "transparent")
+
+# plot 2: teste vs previsão
+p2 <- autoplot(ts_test, series = "Teste") +
+  autolayer(arima_forecast, series = "Previsão", PI = FALSE) +
+  labs(title = "Previsão vs Conjunto de Teste - SARIMA(1,1,1)(1,1,1)[12]",
+       x = "Tempo (Mensal)",
+       y = "Consumo de Eletricidade (GWh)") +
+  scale_colour_manual(values = c("Teste" = "black", "Previsão" = "blue")) +
+  theme_minimal()
+
+ggsave("assets/forecast_sarima2.png", plot = p2, width = 7, height = 4, units = "in", dpi = 300, bg = "transparent")
+
+```
+
+## STLM(ARIMA)
+
+```{r}
+# forecast
+
+library(ggplot2)
+library(forecast)
+
+# forecast
+stlm_forecast <- forecast(fit_stlm, h = length(ts_test))
+
+# avaliação
+forecast::accuracy(stlm_forecast, ts_test)
+
+# plot 1: série completa vs previsão
+p1 <- autoplot(ts_data, series = "Observado") +
+  autolayer(stlm_forecast, series = "Previsão", PI = FALSE) +
+  labs(title = "Previsão vs Série Completa - STLM(ARIMA)",
+       x = "Tempo (Mensal)",
+       y = "Consumo de Eletricidade (GWh)") +
+  scale_colour_manual(values = c("Observado" = "black", "Previsão" = "blue")) +
+  theme_minimal()
+
+ggsave("assets/forecast_stlm1.png", plot = p1, width = 7, height = 4, units = "in", dpi = 300, bg = "transparent")
+
+# plot 2: teste vs previsão
+p2 <- autoplot(ts_test, series = "Teste") +
+  autolayer(stlm_forecast, series = "Previsão", PI = FALSE) +
+  labs(title = "Previsão vs Conjunto de Teste - STLM(ARIMA)",
+       x = "Tempo (Mensal)",
+       y = "Consumo de Eletricidade (GWh)") +
+  scale_colour_manual(values = c("Teste" = "black", "Previsão" = "blue")) +
+  theme_minimal()
+
+ggsave("assets/forecast_stlm2.png", plot = p2, width = 7, height = 4, units = "in", dpi = 300, bg = "transparent")
+```
+
+Forecast accuracy was assessed using `forecast::accuracy()`, which compares fitted values on the training set and forecast values against the test set. In both cases, the training and test error metrics are very close, indicating no signs of overfitting.  
+
+Visually, the predicted values follow the behavior of the actual test data closely, with aligned seasonal patterns and trend shifts.
+
+Both models generalize well to unseen data and can be considered valid for forecasting purposes.
+
+# Results
+
+## Forecast Accuracy Comparison on Test Set
+
+The forecast accuracy of the SARIMA and STLM models is evaluated using standard error metrics:  
+
+- ME (Mean Error): Measures bias. A value close to 0 is desirable, but this metric can be misleading due to cancellation of positive and negative errors.
+
+- RMSE (Root Mean Squared Error): Sensitive to large deviations. Useful when large errors are particularly undesirable. Penalizes outliers more heavily.
+
+- MAE (Mean Absolute Error): Interpretable and robust. Less sensitive to outliers than RMSE. A solid general-purpose metric.
+
+- MPE (Mean Percentage Error): Can produce misleading values when actuals approach zero. May result in large positive or negative values.
+
+- MAPE (Mean Absolute Percentage Error): Intuitive and scale-independent, but unreliable when actual values are near zero.
+
+- MASE (Mean Absolute Scaled Error): Scale-free and comparable across datasets. Values < 1 indicate better performance than the naive forecast. Reliable and interpretable.
+
+- ACF1 (Lag-1 Autocorrelation of Residuals): Measures autocorrelation in residuals. Ideal values are near 0, indicating residuals are uncorrelated.
+
+- Theil's U: Compares performance to a naive benchmark. Values < 1 indicate better-than-naive forecasts.
+
+```{r}
+acc_arima <- forecast::accuracy(arima_forecast, ts_test)
+acc_stlm  <- forecast::accuracy(stlm_forecast, ts_test)
+
+comparison <- rbind(
+  SARIMA = acc_arima["Test set", ],
+  STLM   = acc_stlm["Test set",  ]
+)
+
+round(comparison, 3)
+```
+
+The forecast accuracy metrics for SARIMA and STLM are very similar across all indicators, reflecting comparable overall performance.
+
+## Analysis of 95% Prediction Intervals
+
+The 95% prediction intervals (PI) represent the range within which future observations are expected to fall with 95% confidence.
+
+```{r}
+# extract forecast time indices
+time_vals <- time(arima_forecast$mean)
+df_arima <- data.frame(
+  time = time_vals,
+  lo95 = arima_forecast$lower[,2],
+  hi95 = arima_forecast$upper[,2]
+)
+
+df_stlm <- data.frame(
+  time = time(stlm_forecast$mean),
+  lo95 = stlm_forecast$lower[,2],
+  hi95 = stlm_forecast$upper[,2]
+)
+
+# plot the models 95% PI bands
+p <- ggplot() +
+  autolayer(ts_test, series = "Observado") +
+  geom_ribbon(data = df_arima, aes(x = time, ymin = lo95, ymax = hi95, fill = "SARIMA 95% PI"), alpha = 0.5) +
+  geom_ribbon(data = df_stlm, aes(x = time, ymin = lo95, ymax = hi95, fill = "STLM 95% PI"), alpha = 0.5) +
+  autolayer(ts_test, series = "Observado") +
+  labs(title = "Comparação de Intervalos de Previsãos: SARIMA vs STLM",
+       x = "Tempo (Mensal)",
+       y = "Consumo de Eletricidade (GWh)") +
+  scale_fill_manual(values = c("SARIMA 95% PI" = "#0072B2", "STLM 95% PI" = "#D55E00")) +
+  scale_color_manual(values = c("Observado" = "black")) +
+  theme_minimal()
+
+print(p)
+ggsave("assets/forecast_PI.png", plot = p, width = 7, height = 4, units = "in", dpi = 300, bg = "transparent")
+
+```
+
+Visually, both the SARIMA and STLM forecasts maintain intervals that consistently cover the actual values in the test set, indicating calibrated uncertainty estimates. The width of the intervals remains stable over time.
+
+```{r}
+# accuracy of 95% PI
+inside_95_arima <- ts_test >= arima_forecast$lower[,2] & ts_test <= arima_forecast$upper[,2]
+inside_95_stlm <- ts_test >= stlm_forecast$lower[,2] & ts_test <= stlm_forecast$upper[,2]
+
+cat("The SARIMA has", mean(inside_95_arima)*100,"% of the real values inside its 95% PI.","\n",
+    "The STLM has", mean(inside_95_stlm)*100,"% of the real values inside its 95% PI")
+```
+
+The test observations fall within the 95% intervals for all time points, suggesting that both models produce reliable forecasts.
+
+```{r}
+# avg width of 95% PI
+width_95_arima <- arima_forecast$upper[,2] - arima_forecast$lower[,2]
+width_95_stlm <- stlm_forecast$upper[,2] - stlm_forecast$lower[,2]
+
+cat("The SARIMA 95% PI has an avg width of", mean(width_95_arima),"\n",
+    "The STLM 95% PI has an avg width of", mean(width_95_stlm))
+```
+
+The STLM model produces narrower 95% PI on average compared to SARIMA. This means that the STLM model yields forecasts with lower uncertainty and higher precision. Narrower PIs indicate that the model is more confident in its predictions, which is desirable when coverage is not sacrificed.
+
+# Model Choice
+
+The chosen model is the STLM with ARIMA applied to the seasonally adjusted component, justified by the following points:
+
+- Lower autocorrelation in residuals during model fitting on the training set
+
+- Stronger indications that residuals follow a normal distribution
+
+- Reduced variance in residuals compared to SARIMA(1,1,1)(1,1,1)[12]
+
+- Practically identical forecast accuracy to SARIMA(1,1,1)(1,1,1)[12], with no meaningful difference in performance
+
+- Narrower 95% prediction intervals on average, indicating more confident forecasts
+
+These factors support the selection of STLM(ARIMA) as the final model for forecasting monthly electricity consumption.
+
