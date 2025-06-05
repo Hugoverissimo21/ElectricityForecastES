@@ -29,9 +29,7 @@ Este estudo analisa e prevê o consumo mensal de eletricidade em Espanha com bas
 
 REVER REVER REVER REVER REVER REVER
 
-REVER PLOTS e melhorar
-
-REVER TEXTO TODO + arranjar referências
+REVER TUDO + arranjar referências
 
 REVER REVER REVER REVER REVER REVER
 
@@ -57,7 +55,7 @@ Neste estudo, foi selecionado exclusivamente o caso de Espanha, dado tratar-se d
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/timeserie.png}
+    \includegraphics[width=1\linewidth]{assets/timeseries.png}
     \caption{Série temporal univariada do consumo mensal de eletricidade em Espanha (2008–2025).}
     \label{fig:timeserie}
 \end{figure}
@@ -102,7 +100,7 @@ De seguida, procedeu-se à restante avaliação da estacionariedade da série, c
     \centering
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{assets/stationary_1.png}
+        \includegraphics[width=\linewidth]{assets/timeseries_diag1.png}
         \caption{Série original com respetiva ACF e PACF.}
         \label{fig:stationary_1}
     \end{subfigure}
@@ -111,7 +109,7 @@ De seguida, procedeu-se à restante avaliação da estacionariedade da série, c
 
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{assets/stationary_3.png}
+        \includegraphics[width=\linewidth]{assets/timeseries_diag3.png}
         \caption{Série diferenciada (ordem 1 e ordem 12) com respetiva ACF e PACF.}
         \label{fig:stationary_3}
     \end{subfigure}
@@ -148,7 +146,7 @@ Assim, foram escolhidos três modelos para uma análise mais detalhada:
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/arima_1.png}
+    \includegraphics[width=1\linewidth]{assets/arima_fits.png}
     \caption{Ajuste dos diferentes SARIMA aos dados de treino.}
     \label{fig:arima_1}
 \end{figure}
@@ -161,14 +159,14 @@ Apesar de o teste de Ljung-Box aplicado aos seus resíduos ter produzido um p-va
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/arima_2.png}
+    \includegraphics[width=1\linewidth]{assets/sarima_fit_residuos.png}
     \caption{Análise dos resíduos do modelo SARIMA.}
     \label{fig:arima_2}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/arima_3.png}
+    \includegraphics[width=1\linewidth]{assets/sarima_fit_qqplot.png}
     \caption{Gráfico QQ dos resíduos do modelo SARIMA.}
     \label{fig:arima_3}
 \end{figure}
@@ -203,14 +201,14 @@ Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente v
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/stlm_residuals.png}
+    \includegraphics[width=1\linewidth]{assets/stlm_fit_residuos.png}
     \caption{Análise dos resíduos do modelo STLM.}
     \label{fig:stlm_residuals}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/stlm_qq.png}
+    \includegraphics[width=1\linewidth]{assets/stlm_fit_qqplot.png}
     \caption{Gráfico QQ dos resíduos do modelo STLM.}
     \label{fig:stlm_qq}
 \end{figure}
@@ -231,7 +229,7 @@ Comparando as métricas de previsão obtidas sobre os dados de teste com as mét
     \centering
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{assets/forecast_sarima.png}
+        \includegraphics[width=\linewidth]{assets/forecast_sarima1.png}
         \caption{Modelo SARIMA(1,1,1)(1,1,1)[12].}
         \label{fig:forecast_sarima}
     \end{subfigure}
@@ -240,7 +238,7 @@ Comparando as métricas de previsão obtidas sobre os dados de teste com as mét
 
     \begin{subfigure}[b]{0.9\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{assets/forecast_stlm.png}
+        \includegraphics[width=\linewidth]{assets/forecast_stlm1.png}
         \caption{Modelo STLM(ARIMA).}
         \label{fig:forecast_stlm}
     \end{subfigure}
@@ -253,7 +251,7 @@ A Fig. \ref{fig:forecastvsobs} apresenta a comparação gráfica entre os valore
 
 \begin{table}[H]
     \centering
-    \caption{Comparação das métricas de previsão no conjunto de teste: SARIMA vs. STLM}
+    \caption{Comparação das métricas de previsão no conjunto de teste: SARIMA vs STLM}
     \label{tab:forecast_comparison}
     \begin{tabular}{lcc}
         \toprule
@@ -277,7 +275,7 @@ Dado este equilíbrio em termos de erro preditivo pontual, torna-se particularme
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/forecast_pi.png}
+    \includegraphics[width=1\linewidth]{assets/forecast_PI.png}
     \caption{Intervalos de previsão a 95\% para os modelos SARIMA e STLM.}
     \label{fig:forecast_pi}
 \end{figure}
