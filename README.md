@@ -5,3 +5,5 @@ Time series forecasting of electricity demand in Spain using classical statistic
 - https://hugoverissimo21.github.io/ElectricityForecastES/analysis.html
 
 - https://hugoverissimo21.github.io/ElectricityForecastES/report/ST01.pdf
+
+- https://hugoverissimo21.github.io/ElectricityForecastES/slides.pdf
