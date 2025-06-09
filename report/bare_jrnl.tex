@@ -22,16 +22,10 @@
 \maketitle
 
 \begin{abstract}
-Este estudo analisa e prevê o consumo mensal de eletricidade em Espanha com base em dados do Eurostat (2008–2025). Foram comparados vários modelos estatísticos de séries temporais, incluindo SARIMA, GARCH, ETS e STLM. Os modelos SARIMA e STLM apresentaram bom desempenho preditivo, mas o STLM destacou-se por gerar resíduos mais regulares e intervalos de previsão mais estreitos, mantendo a cobertura. Este modelo foi, assim, selecionado como a melhor opção para previsão.
+Este estudo analisa e prevê o consumo mensal de eletricidade em Espanha com base em dados do Eurostat (2008–2025). Foram comparados vários modelos estatísticos de séries temporais, incluindo SARIMA, GARCH, ETS e STLM. Os modelos SARIMA e STLM apresentaram um bom desempenho preditivo, sendo que o STLM se destacou por gerar resíduos mais regulares e intervalos de previsão mais estreitos, mantendo a cobertura. Este modelo foi, assim, selecionado como a melhor opção para previsão.
 \end{abstract}
 
 \IEEEpeerreviewmaketitle
-
-REVER REVER REVER REVER REVER REVER
-
-REVER TUDO + arranjar referências
-
-REVER REVER REVER REVER REVER REVER
 
 \section{Introdução}
 
@@ -39,9 +33,9 @@ A monitorização e previsão do consumo de eletricidade desempenham um papel ce
 
 Assim, o presente trabalho tem como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, utilizando dados oficiais do Eurostat \cite{eurostat_nrg_cb_em}. Através da análise de séries temporais, pretende-se identificar padrões estruturais e comportamentos sazonais, com vista à construção de modelos preditivos que possam apoiar a tomada de decisão estratégica no domínio da energia.
 
-Tendo em objetivo em vista, serão utilizados diferentes modelos estatísticos de séries temporais, nomeadamente modelos SARIMA, GARCH, ETS e STLM. A escolha destes modelos justifica-se pela sua capacidade comprovada de capturar componentes sazonais, tendências estruturais e padrões residuais em séries univariadas.
+Com este objetivo, serão aplicados diversos modelos estatísticos de séries temporais, nomeadamente SARIMA, GARCH, ETS e STLM. A seleção destes modelos justifica-se pela sua reconhecida eficácia na captura de componentes sazonais, tendências estruturais e padrões residuais em séries univariadas, propriedades que caracterizam a série em análise.
 
-A comparação entre os modelos será efetuada com base no desempenho preditivo em dados de validação, bem como na análise dos resíduos obtidos durante o treino. A avaliação conjunta destes critérios permite não apenas identificar o modelo com melhor capacidade de previsão, mas também assegurar que os pressupostos estatísticos subjacentes à modelação são razoavelmente cumpridos.
+A comparação entre os modelos será efetuada com base no desempenho preditivo em dados de teste, bem como na análise dos resíduos obtidos durante o treino. A avaliação conjunta destes critérios permite não apenas identificar o modelo com melhor capacidade de previsão, mas também assegurar que os pressupostos estatísticos subjacentes à modelação são razoavelmente cumpridos.
 
 
 
@@ -49,7 +43,7 @@ A comparação entre os modelos será efetuada com base no desempenho preditivo 
 
 \section{Análise Exploratória dos Dados}
 
-Como já referido anteriormente, os dados utilizados neste estudo estão disponíveis na plataforma do Eurostat \cite{eurostat_nrg_cb_em}. Esta base de dados inclui, para além dos valores mensais de consumo de eletricidade em Espanha, informações equivalentes para um total de 40 países, abrangendo outros países europeus. Tal abrangência torna esta fonte particularmente robusta e adequada para estudos comparativos e análises aprofundadas no domínio da energia.
+Como já referido anteriormente, os dados utilizados neste estudo estão disponíveis na plataforma do Eurostat \cite{eurostat_nrg_cb_em}. Esta base de dados inclui, para além dos valores mensais de consumo de eletricidade em Espanha, informações equivalentes para um total de 40 países europeus. Tal abrangência torna esta fonte particularmente robusta e adequada para estudos comparativos e análises aprofundadas no domínio da energia.
 
 Neste estudo, foi selecionado exclusivamente o caso de Espanha, dado tratar-se de uma análise de séries temporais univariadas. Os dados correspondem ao consumo mensal de eletricidade neste país, medido em Gigawatt-hora (GWh), abrangendo o período de janeiro de 2008 a fevereiro de 2025. A série é completa, sem quaisquer valores em falta, totalizando 206 observações consecutivas.
 
@@ -62,7 +56,7 @@ Neste estudo, foi selecionado exclusivamente o caso de Espanha, dado tratar-se d
 
 Na Fig. \ref{fig:timeserie} podem-se observar as 206 observações relativas ao caso em estudo, demonstrando a presença de sazonalidade nos dados, juntamente com uma possível tendência decrescente e um valor discrepante no início de 2020.
 
-Este valor, após uma breve investigação, aparenta estar relacionado com o impacto da pandemia de COVID-19, que provocou alterações significativas nos padrões de consumo energético devido à redução da atividade económica, confinamentos e mudanças no comportamento da população \cite{outlier_2020}. Por não se tratar de um erro de registo ou medição, o valor não será removido nem ajustado. No entanto, será tido em conta com mais atenção na análise do desempenho dos diferentes modelos.
+Este valor, após uma breve investigação, aparenta estar relacionado com o impacto da pandemia de COVID-19, que provocou alterações significativas nos padrões de consumo energético devido à redução da atividade económica, confinamentos e mudanças no comportamento da população \cite{outlier_2020}. Por não se tratar de um erro de registo ou medição, o valor não será removido nem ajustado. No entanto, será considerado com especial atenção na análise do desempenho dos diferentes modelos, caso se revele relevante.
 
 \subsection{Separação dos Dados em Treino e Teste}
 
@@ -72,7 +66,7 @@ Esta divisão resulta numa proporção aproximada de 80\% para treino e 20\% par
 
 \subsection{Análise da Estacionariedade}
 
-A estacionariedade é uma propriedade fundamental em muitas técnicas de modelação de séries temporais, exigindo que as características estatísticas da série, como a média, a variância e a autocovariância, permaneçam constantes ao longo do tempo.
+A estacionariedade é uma propriedade fundamental em muitas técnicas de modelação de séries temporais, exigindo que as características estatísticas da série, como a média, a variância e a autocovariância, permaneçam constantes ao longo do tempo \cite{estacionario}.
 
 Antes de proceder a uma avaliação mais formal da estacionariedade, analisou-se a necessidade de aplicar uma transformação de Box-Cox, com o objetivo de estabilizar a variância ao longo do tempo.
 
@@ -85,14 +79,7 @@ Antes de proceder a uma avaliação mais formal da estacionariedade, analisou-se
 
 Através da análise da Fig. \ref{fig:boxcox}, e tendo em conta o valor de $\lambda$ ajustado automaticamente ($\lambda = 1.91$), bem como a representação gráfica da série transformada, conclui-se que não há qualquer benefício relevante em aplicar a transformação. Não se observam indícios visuais de heterocedasticidade na série original.
 
-Para confirmar esta impressão, foi aplicado o teste de Breusch-Pagan à série original. Este teste avalia a presença de heterocedasticidade com as seguintes hipóteses:
-
-\begin{itemize}
-    \item $H_0$: a série tem variância constante;
-    \item $H_1$: a série tem variância não constante.
-\end{itemize}
-
-O p-valor obtido foi $0.5541$, valor claramente superior ao nível de significância usual (por exemplo, 5\%), pelo que não se rejeita a hipótese nula. Assim, conclui-se que não há evidência estatística de heterocedasticidade na série, o que reforça a decisão de não aplicar qualquer transformação estabilizadora da variância e suporta a suposição de variância constante exigida pela estacionariedade.
+Para confirmar esta impressão, foi aplicado o teste de Breusch-Pagan à série original. Este teste avalia a presença de heterocedasticidade, sendo a hipótese nula de que a série tem variância constante (homocedasticidade), contra a alternativa de que a variância não é constante. O p-valor obtido foi 0.5541, valor claramente superior a qualquer nível de significância usual, pelo que não se rejeita a hipótese nula. Assim, conclui-se que não há evidência estatística de heterocedasticidade na série, o que reforça a decisão de não aplicar qualquer transformação estabilizadora da variância e suporta a suposição de variância constante exigida pela estacionariedade.
 
 De seguida, procedeu-se à restante avaliação da estacionariedade da série, começando por uma inspeção visual. Esta análise foi complementada pelas funções de autocorrelação (ACF) e autocorrelação parcial (PACF), que permitem identificar padrões de dependência temporal e indicar a presença de componentes sazonais ou tendências persistentes. Estas ferramentas oferecem uma primeira aproximação ao comportamento estrutural da série, orientando eventuais transformações necessárias para satisfazer os pressupostos dos modelos a aplicar.
 
@@ -126,15 +113,15 @@ Para confirmar formalmente esta avaliação, foram aplicados dois testes estatí
 
 A aplicação dos testes formais confirmou a avaliação visual inicial. No caso da série original, esta é indicada não estacionária. Após a aplicação de diferenciações de ordem 1 (para eliminar a tendência) e 12 (para remover a sazonalidade), ambos os testes conduzem à conclusão oposta: o teste ADF rejeita a presença de raiz unitária, e o teste KPSS não rejeita a hipótese de estacionariedade.
 
-Assim, a série transformada é considerada estacionária para qualquer nível de confiança típico, incluindo $1\%$.
+Assim, a série transformada é considerada estacionária para qualquer nível de confiança típico, incluindo $5\%$.
 
 \section{Propostas de Modelos}
 
-Com o objetivo de modelar e prever o consumo mensal de eletricidade em Espanha, serão considerados vários modelos clássicos de séries temporais, nomeadamente modelos SARIMA, GARCH, ETS e STLM. Cada abordagem será avaliada prioritariamente com base na validade dos pressupostos estatísticos subjacentes. Apenas no caso de essa validação ser bem-sucedida, será então considerado o seu desempenho preditivo em dados de teste, assegurando que a capacidade de previsão não compromete a consistência do modelo.
+Com o objetivo de modelar e prever o consumo mensal de eletricidade em Espanha, serão considerados vários modelos clássicos de séries temporais, nomeadamente modelos SARIMA, GARCH, ETS e STLM. Cada abordagem será avaliada prioritariamente com base na validade dos pressupostos estatísticos subjacentes. Apenas no caso dessa validação ser bem-sucedida, será então considerado o seu desempenho preditivo com base nos dados de teste, assegurando que a capacidade de previsão não compromete a consistência do modelo.
 
 \subsection{SARIMA}
 
-Dado que o modelo SARIMA permite incorporar explicitamente as diferenciações de primeira ordem e sazonal ($d = D = 1$), será seguida uma abordagem dual para a sugestão dos parâmetros: por um lado, a análise da ACF e da PACF da série diferenciada orientará a escolha inicial das ordens dos componentes autorregressivos e de médias móveis, tanto sazonais como não sazonais; por outro lado, será realizada uma seleção sistemática de modelos SARIMA através da comparação do critério de informação corrigido (AICc), testando modelos com e sem imposição prévia das ordens de diferenciação definidas pela análise exploratória. O modelo final será escolhido com base no menor valor de AICc, desde que respeite os pressupostos de adequação estatística.
+Dado que o modelo SARIMA permite incorporar explicitamente as diferenciações de primeira ordem e sazonal ($d = 1 \land D = 1$), será seguida uma abordagem dual para a sugestão dos parâmetros: por um lado, a análise da ACF e da PACF da série diferenciada orientará a escolha inicial das ordens dos componentes autorregressivos e de médias móveis, tanto sazonais como não sazonais; por outro lado, será realizada uma seleção sistemática de modelos SARIMA através da comparação do critério de informação corrigido (AICc), testando modelos com e sem imposição prévia das ordens de diferenciação definidas pela análise exploratória. O modelo final será escolhido com base no menor valor de AICc, desde que respeite os pressupostos de adequação estatística.
 
 Assim, foram escolhidos três modelos para uma análise mais detalhada:
 
@@ -171,9 +158,9 @@ Apesar de o teste de Ljung-Box aplicado aos seus resíduos ter produzido um p-va
     \label{fig:arima_3}
 \end{figure}
 
-Quanto aos restantes pressupostos, através das Fig. \ref{fig:arima_2} e \ref{fig:arima_3}, bem como dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
+Quanto aos restantes pressupostos, através das Fig. \ref{fig:arima_2} e \ref{fig:arima_3}, e dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
 
-Quanto aos parâmetros do modelo SARIMA, os mesmos foram analisados tendo em conta a sua significância estatística e a correlação entre coeficientes. A análise revelou a insignificância do parâmetro sazonal autorregressivo (\textit{sar1}), o que levanta dúvidas sobre a sua contribuição efetiva para o modelo. Adicionalmente, observou-se uma correlação elevada entre os parâmetros autorregressivo e de médias móveis não sazonais (\textit{ar1} e \textit{ma1}), com um coeficiente aproximado de $-0{,}81$. Esta correlação forte pode indicar redundância estrutural no modelo e potenciais problemas de identificação.
+Quanto aos parâmetros do modelo SARIMA, os mesmos foram analisados tendo em conta a sua significância estatística e a correlação entre coeficientes. A análise revelou a insignificância do parâmetro sazonal autorregressivo (\textit{sar1}), o que levanta dúvidas sobre a sua contribuição efetiva para o modelo. Adicionalmente, observou-se uma correlação elevada entre os parâmetros autorregressivo e de médias móveis não sazonais (\textit{ar1} e \textit{ma1}), com um coeficiente aproximado de $-0.81$. Esta correlação forte pode indicar redundância estrutural no modelo e potenciais problemas de identificação.
 
 Ainda assim, a remoção do parâmetro não significativo e de um dos parâmetros fortemente correlacionados resultou no agravamento da autocorrelação nos resíduos, comprometendo ainda mais a adequação do modelo. Pelo que, apesar das limitações identificadas, optou-se por manter a estrutura completa do modelo SARIMA(1,1,1)(1,1,1)[12], dado ser o compromisso mais aceitável entre qualidade do ajustamento, simplicidade estrutural e cumprimento dos pressupostos essenciais.
 
@@ -185,7 +172,7 @@ O p-valor obtido foi $0.6337$, valor claramente superior aos níveis de signific
 
 \subsection{ETS}
 
-Procedeu-se à aplicação de um modelo ETS (Error, Trend, Seasonal), uma abordagem adequada para séries temporais com componentes de tendência e sazonalidade bem definidas. Ao contrário dos modelos SARIMA, os modelos ETS não requerem estacionariedade, o que os torna particularmente úteis em contextos onde a estabilização da série pode distorcer a estrutura subjacente.
+Procedeu-se também à aplicação de um modelo ETS (Error, Trend, Seasonal), uma abordagem adequada para séries temporais com componentes de tendência e sazonalidade bem definidas. Ao contrário dos modelos SARIMA, os modelos ETS não requerem estacionariedade, o que os torna particularmente úteis em contextos onde a estabilização da série pode distorcer a estrutura subjacente.
 
 O modelo ajustado foi selecionado automaticamente com base no critério AICc, tendo sido escolhido o modelo ETS(M,N,A), ou seja, com erro multiplicativo, sem tendência e com sazonalidade aditiva.
 
@@ -193,7 +180,7 @@ No entanto, a análise dos resíduos revelou autocorrelação significativa. O t
 
 \subsection{STLM}
 
-Foi também considerado um modelo STLM (Seasonal and Trend decomposition using Loess + ARIMA), que combina a decomposição da série temporal em componentes sazonais e de tendência através de suavização local (Loess), seguida da modelação do componente restante com um modelo ARIMA. ??? refs
+Foi também considerado um modelo STLM (Seasonal and Trend decomposition using Loess + ARIMA), que combina a decomposição da série temporal em componentes sazonais e de tendência através de suavização local (Loess), seguida da modelação do componente restante com um modelo ARIMA \cite{forecast-package}.
 
 Esta abordagem tem como vantagem permitir um tratamento explícito da sazonalidade, antes de ajustar a estrutura dinâmica residual, o que pode ser útil em séries com sazonalidade complexa ou não linear.
 
@@ -213,9 +200,7 @@ Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente v
     \label{fig:stlm_qq}
 \end{figure}
 
-Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A partir da análise gráfica (Figs. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}), observou-se uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias muito significativas.
-
-Esta impressão foi reforçada pelos testes formais: o teste de Shapiro–Wilk produziu um p-valor de $0.01422$, sugerindo rejeição da hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar essa hipótese. Apesar da divergência nos resultados, o comportamento geral dos resíduos pode ser considerado estatisticamente aceitável, dada a sensibilidade conhecida do teste de Shapiro–Wilk a pequenas imperfeições. Assim, a normalidade dos resíduos no modelo STLM, embora não confirmada inequivocamente, não levanta preocupações críticas no contexto da modelação.
+Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A análise gráfica (Figs. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}) revela uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias relevantes. Esta impressão foi apoiada por testes formais: o teste de Shapiro–Wilk produziu um p-valor de $0.01422$, o que, embora sugira rejeição da hipótese de normalidade ao nível de significância de $5\%$, situa-se perto do limiar e pode ser interpretado com cautela, tendo em conta a elevada sensibilidade do teste a pequenas imperfeições. Por outro lado, o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar a hipótese de normalidade. Apesar da ligeira inconsistência entre os testes, o comportamento global dos resíduos pode ser considerado compatível com a normalidade, não comprometendo os pressupostos do modelo STLM nem a sua validade inferencial.
 
 Dado o cumprimento dos pressupostos e a estabilidade do comportamento residual, o modelo STLM será considerado como um possível modelo para previsão, a ser testado posteriormente no conjunto de dados de teste. A sua seleção baseia-se na solidez estrutural e na adequação estatística observada durante o ajuste aos dados de treino.
 
@@ -269,7 +254,7 @@ A Fig. \ref{fig:forecastvsobs} apresenta a comparação gráfica entre os valore
     \end{tabular}
 \end{table}
 
-A Tabela~\ref{tab:forecast_comparison} apresenta a comparação direta entre os modelos SARIMA e STLM com base no seu desempenho preditivo sobre o conjunto de teste. As métricas obtidas revelam valores bastante semelhantes entre os dois modelos, não existindo diferenças expressivas que justifiquem a escolha inequívoca de um em detrimento do outro apenas com base na precisão da previsão. Ambos demonstram capacidade adequada de generalização, sem sinais evidentes de \textit{overfitting}, sendo a decisão final passível de depender de outros critérios como interpretabilidade, robustez dos resíduos ou objetivos específicos da aplicação.
+A Tabela \ref{tab:forecast_comparison} apresenta a comparação direta entre os modelos SARIMA e STLM com base no seu desempenho preditivo sobre o conjunto de teste. As métricas obtidas revelam valores bastante semelhantes entre os dois modelos, não existindo diferenças expressivas que justifiquem a escolha inequívoca de um em detrimento do outro apenas com base na precisão da previsão.
 
 Dado este equilíbrio em termos de erro preditivo pontual, torna-se particularmente relevante a análise dos intervalos de previsão. Esta dimensão permite avaliar a incerteza associada às previsões de cada modelo, bem como a amplitude e a cobertura dos respetivos intervalos.
 
@@ -280,7 +265,7 @@ Dado este equilíbrio em termos de erro preditivo pontual, torna-se particularme
     \label{fig:forecast_pi}
 \end{figure}
 
-A Fig. \ref{fig:forecast_pi} ilustra as previsões dos dois modelos acompanhadas pelos respetivos intervalos de previsão a 95\%. Ambos os modelos apresentam cobertura total dos valores reais dentro dos seus intervalos de confiança, ou seja, 100\% das observações do período de teste encontram-se contidas nas previsões com 95\% de confiança, tanto para o modelo SARIMA como para o STLM.
+A Fig. \ref{fig:forecast_pi} ilustra os invervalos de previsão a 95\% dos dois modelos. Ambos os modelos apresentam cobertura total dos valores reais dentro dos seus intervalos de confiança, ou seja, 100\% das observações do período de teste encontram-se contidas nas previsões com 95\% de confiança, tanto para o modelo SARIMA como para o STLM.
 
 No entanto, a largura média dos intervalos difere entre os modelos: o SARIMA apresenta uma amplitude média de $4378.183$, enquanto o modelo STLM regista uma largura média inferior, de $3639.196$. O modelo STLM produz, assim, intervalos de previsão a 95\% mais estreitos em média, quando comparado com o SARIMA. Isto significa que o STLM gera previsões com menor incerteza e idêntica precisão. Intervalos mais estreitos indicam maior confiança do modelo nas suas previsões, o que é particularmente desejável quando a cobertura não é sacrificada, como é o caso presente, visto que ambos os modelos mantêm 100\% de cobertura.
 
@@ -288,7 +273,7 @@ No entanto, a largura média dos intervalos difere entre os modelos: o SARIMA ap
 
 A análise desenvolvida permitiu avaliar comparativamente múltiplas abordagens de modelação para a previsão do consumo mensal de eletricidade em Espanha. Embora tanto o modelo SARIMA(1,1,1)(1,1,1)[12] como o STLM com componente ARIMA tenham revelado desempenho preditivo semelhante, a avaliação aprofundada dos resíduos e dos intervalos de previsão revelou diferenças estruturais relevantes.
 
-O modelo STLM demonstrou menor autocorrelação residual, variância inferior e maior conformidade com a suposição de normalidade dos erros. Estas características sugerem uma modelação mais robusta e estatisticamente fiável. Além disso, a capacidade de gerar intervalos de previsão mais estreitos, mantendo 100\% de cobertura no período de teste, evidencia maior confiança associada às suas previsões — um fator crítico na comunicação de resultados em contextos operacionais e de apoio à decisão.
+O modelo STLM demonstrou menor autocorrelação residual, variância inferior e maior conformidade com a suposição de normalidade dos erros. Estas características sugerem uma modelação mais robusta e estatisticamente fiável. Além disso, a capacidade de gerar intervalos de previsão mais estreitos, mantendo 100\% de cobertura no período de teste, evidencia maior confiança associada às suas previsões, um fator crítico na comunicação de resultados em contextos operacionais e de apoio à decisão.
 
 Apesar do bom desempenho do modelo SARIMA, a sua estrutura residual mais ruidosa e a dependência de transformações diferenciais podem limitar a sua interpretabilidade e estabilidade em cenários futuros. Já o STLM, ao separar explicitamente os componentes estruturais da série antes da modelação dinâmica, oferece maior transparência no ajustamento e potencial adaptabilidade a alterações na sazonalidade.
 
@@ -298,22 +283,15 @@ Em síntese, a escolha do modelo STLM(ARIMA) surge como uma decisão natural e j
 
 Este estudo teve como objetivo modelar e prever o consumo mensal de eletricidade em Espanha, com base em dados oficiais do Eurostat. A análise envolveu a aplicação e comparação de vários modelos estatísticos de séries temporais, incluindo SARIMA, ETS, GARCH e STLM, avaliados segundo critérios de ajustamento, validação dos pressupostos e desempenho preditivo.
 
-Apesar do modelo SARIMA ter apresentado um bom desempenho geral, foi o modelo STLM(ARIMA) que demonstrou maior robustez estrutural: resíduos mais regulares, menor autocorrelação, maior aproximação à normalidade e intervalos de previsão mais estreitos, mantendo a cobertura total. Estes resultados sustentam a sua escolha como modelo final para previsão.
+Apesar do modelo SARIMA(1,1,1)(1,1,1)[12] ter apresentado um bom desempenho geral, foi o modelo STLM(ARIMA) que demonstrou maior robustez estrutural: resíduos mais regulares, menor autocorrelação, maior aproximação à normalidade e intervalos de previsão mais estreitos, mantendo a cobertura total. Estes resultados sustentam a sua escolha como modelo final para previsão.
 
-Conclui-se que o modelo STLM, ao conjugar decomposição estrutural com modelação ARIMA, representa uma solução eficaz para séries com forte sazonalidade e tendência, como é o caso do consumo de eletricidade. A abordagem seguida neste estudo fornece um enquadramento sólido para aplicações semelhantes noutras séries energéticas ou económicas com características análogas.
+Conclui-se que o modelo STLM, ao conjugar decomposição estrutural com modelação ARIMA, representa uma solução eficaz para séries com forte sazonalidade, como é o caso do consumo de eletricidade. A abordagem seguida neste estudo fornece um enquadramento sólido para aplicações semelhantes noutras séries energéticas ou económicas com características análogas.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 
-\appendices
-\section{Título do Apêndice A}
-METER ANALISE DAS PREVISOES: TREINO VS TESTE PARA DIZER Q N HA OVERFITTING
-
-\section{Título do Apêndice B}
-Auxiliary/not so important results are included in the Appendix.
-
 \appendix
 \section{OU se for só 1: Título do Apêndice}
-Auxiliary/not so important results are included in the Appendix.
+METER ANALISE DAS PREVISOES: TREINO VS TESTE PARA DIZER Q N HA OVERFITTING
 
 \end{document}
