@@ -54,7 +54,7 @@ Neste estudo, foi selecionado exclusivamente o caso de Espanha, dado tratar-se d
     \label{fig:timeserie}
 \end{figure}
 
-Na Fig. \ref{fig:timeserie} podem-se observar as 206 observações relativas ao caso em estudo, demonstrando a presença de sazonalidade nos dados, juntamente com uma possível tendência decrescente e um valor discrepante no início de 2020.
+Na Fig. \ref{fig:timeserie} podem observar-se as 206 observações relativas ao caso em estudo, demonstrando a presença de sazonalidade nos dados, juntamente com uma possível tendência decrescente e um valor discrepante no início de 2020.
 
 Este valor, após uma breve investigação, aparenta estar relacionado com o impacto da pandemia de COVID-19, que provocou alterações significativas nos padrões de consumo energético devido à redução da atividade económica, confinamentos e mudanças no comportamento da população \cite{outlier_2020}. Por não se tratar de um erro de registo ou medição, o valor não será removido nem ajustado. No entanto, será considerado com especial atenção na análise do desempenho dos diferentes modelos, caso se revele relevante.
 
@@ -77,7 +77,7 @@ Antes de proceder a uma avaliação mais formal da estacionariedade, analisou-se
     \label{fig:boxcox}
 \end{figure}
 
-Através da análise da Fig. \ref{fig:boxcox}, e tendo em conta o valor de $\lambda$ ajustado automaticamente ($\lambda = 1.91$), bem como a representação gráfica da série transformada, conclui-se que não há qualquer benefício relevante em aplicar a transformação. Não se observam indícios visuais de heterocedasticidade na série original.
+Através da análise da Fig. \ref{fig:boxcox}, e tendo em conta o valor de $\lambda$ ajustado automaticamente ($\lambda = 1.09$), bem como a representação gráfica da série transformada, conclui-se que não há qualquer benefício relevante em aplicar a transformação. Não se observam indícios visuais de heterocedasticidade na série original.
 
 Para confirmar esta impressão, foi aplicado o teste de Breusch-Pagan à série original. Este teste avalia a presença de heterocedasticidade, sendo a hipótese nula de que a série tem variância constante (homocedasticidade), contra a alternativa de que a variância não é constante. O p-valor obtido foi 0.5541, valor claramente superior a qualquer nível de significância usual, pelo que não se rejeita a hipótese nula. Assim, conclui-se que não há evidência estatística de heterocedasticidade na série, o que reforça a decisão de não aplicar qualquer transformação estabilizadora da variância e suporta a suposição de variância constante exigida pela estacionariedade.
 
@@ -111,7 +111,7 @@ Esta transformação é essencial para garantir a validade dos pressupostos dos 
 
 Para confirmar formalmente esta avaliação, foram aplicados dois testes estatísticos complementares: o teste de Dickey-Fuller aumentado (ADF), cuja hipótese nula assume a presença de raiz unitária (não estacionariedade), e o teste KPSS, cuja hipótese nula assume estacionariedade.
 
-A aplicação dos testes formais confirmou a avaliação visual inicial. No caso da série original, esta é indicada não estacionária. Após a aplicação de diferenciações de ordem 1 (para eliminar a tendência) e 12 (para remover a sazonalidade), ambos os testes conduzem à conclusão oposta: o teste ADF rejeita a presença de raiz unitária, e o teste KPSS não rejeita a hipótese de estacionariedade.
+A aplicação dos testes formais confirmou a avaliação visual inicial. No caso da série original, esta é indicada não estacionária. Após a aplicação de diferenciações de ordem 1 (para eliminar a tendência) e 12 (para remover a sazonalidade), ambos os testes conduzem à conclusão oposta: o teste ADF rejeita a presença de raiz unitária e o teste KPSS não rejeita a hipótese de estacionariedade.
 
 Assim, a série transformada é considerada estacionária para qualquer nível de confiança típico, incluindo $5\%$.
 
@@ -200,13 +200,13 @@ Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente v
     \label{fig:stlm_qq}
 \end{figure}
 
-Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A análise gráfica (Figs. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}) revela uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias relevantes. Esta impressão foi apoiada por testes formais: o teste de Shapiro–Wilk produziu um p-valor de $0.01422$, o que, embora sugira rejeição da hipótese de normalidade ao nível de significância de $5\%$, situa-se perto do limiar e pode ser interpretado com cautela, tendo em conta a elevada sensibilidade do teste a pequenas imperfeições. Por outro lado, o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar a hipótese de normalidade. Apesar da ligeira inconsistência entre os testes, o comportamento global dos resíduos pode ser considerado compatível com a normalidade, não comprometendo os pressupostos do modelo STLM nem a sua validade inferencial.
+Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A análise gráfica (Fig. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}) revela uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias relevantes. Esta impressão foi apoiada por testes formais. O teste de Shapiro–Wilk produziu um p-valor de $0.01422$ que, embora sugira rejeição da hipótese de normalidade ao nível de significância de $5\%$, situa-se perto do limiar e pode ser interpretado com cautela, tendo em conta a elevada sensibilidade do teste a pequenas imperfeições. Por outro lado, o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar a hipótese de normalidade. Apesar da ligeira inconsistência entre os testes, o comportamento global dos resíduos pode ser considerado compatível com a normalidade, não comprometendo os pressupostos do modelo STLM nem a sua validade inferencial.
 
 Dado o cumprimento dos pressupostos e a estabilidade do comportamento residual, o modelo STLM será considerado como um possível modelo para previsão, a ser testado posteriormente no conjunto de dados de teste. A sua seleção baseia-se na solidez estrutural e na adequação estatística observada durante o ajuste aos dados de treino.
 
 \section{Previsão de Observações Futuras}
 
-Tendo em conta a análise dos modelos propostos, os modelos selecionados para avaliação da capacidade preditiva serão o SARIMA(1,1,1)(1,1,1)[12] e o STLM com componente residual modelado por ARIMA. Ambos os modelos demonstraram ajustamentos estatisticamente aceitáveis aos dados de treino, cumprindo os principais pressupostos, e serão agora comparados com base no seu desempenho sobre o conjunto de teste.
+Tendo em conta a análise dos modelos propostos, os modelos selecionados para avaliação da capacidade preditiva serão o SARIMA(1,1,1)(1,1,1)[12] e o STLM com componente residual modelado por ARIMA. Ambos demonstraram ajustamentos estatisticamente aceitáveis aos dados de treino, cumprindo os principais pressupostos. Estes serão agora comparados com base no seu desempenho sobre o conjunto de teste.
 
 Através da comparação das métricas de previsão obtidas sobre os dados de teste com as métricas de ajustamento sobre os dados de treino, observou-se uma semelhança significativa entre ambas. Esta estabilidade entre fases indica que não há indícios de \textit{overfitting}, o que reforça a robustez dos modelos selecionados para fins preditivos.
 
