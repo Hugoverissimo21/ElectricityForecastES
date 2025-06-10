@@ -1,8 +1,11 @@
 ---
-title: "ST01: Monthly electricity consumption in Spain"
+title: 'ST01: Monthly electricity consumption in Spain'
 author: "Hugo"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document:
+    latex_engine: xelatex # or lualatex - required for geometry package to work well
+    pandoc_args: ["--variable", "geometry=landscape"]
 ---
 
 ```{r, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
@@ -200,7 +203,7 @@ Nonetheless, a Box-Cox transformation can still be applied to evaluate whether v
 
 
 ```{r, fig.height=10}
-png("assets/boxcox.png", width = 7, height = 9, units = "in", res = 300, bg = "transparent")
+#png("assets/boxcox.png", width = 7, height = 9, units = "in", res = 300, bg = "transparent")
 
 par(mfrow = c(2, 1))
 
@@ -212,12 +215,12 @@ plot(df$value,
 
 lambda <- BoxCox.lambda(df$value)
 plot(BoxCox(df$value, lambda), 
-     main = paste("Transformação de Box-Cox (λ =", round(lambda, 2), ")"),
+     main = paste("Transformação de Box-Cox ( =", round(lambda, 2), ")"),
      ylab = "Transformado", 
      xlab = "Tempo", 
      type = "l")
 
-dev.off()
+#dev.off()
 
 ```
 
