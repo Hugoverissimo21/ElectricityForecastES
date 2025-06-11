@@ -81,8 +81,6 @@ Através da análise da Fig. \ref{fig:boxcox}, e tendo em conta o valor de $\lam
 
 Para confirmar esta impressão, foi aplicado o teste de Breusch-Pagan à série original. Este teste avalia a presença de heterocedasticidade, sendo a hipótese nula de que a série tem variância constante (homocedasticidade), contra a alternativa de que a variância não é constante. O p-valor obtido foi 0.5541, valor claramente superior a qualquer nível de significância usual, pelo que não se rejeita a hipótese nula. Assim, conclui-se que não há evidência estatística de heterocedasticidade na série, o que reforça a decisão de não aplicar qualquer transformação estabilizadora da variância e suporta a suposição de variância constante exigida pela estacionariedade.
 
-De seguida, procedeu-se à restante avaliação da estacionariedade da série, começando por uma inspeção visual. Esta análise foi complementada pelas funções de autocorrelação (ACF) e autocorrelação parcial (PACF), que permitem identificar padrões de dependência temporal e indicar a presença de componentes sazonais ou tendências persistentes. Estas ferramentas oferecem uma primeira aproximação ao comportamento estrutural da série, orientando eventuais transformações necessárias para satisfazer os pressupostos dos modelos a aplicar.
-
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.9\linewidth}
@@ -104,6 +102,10 @@ De seguida, procedeu-se à restante avaliação da estacionariedade da série, c
     \caption{Avaliação visual da estacionariedade: série temporal original (a) e após diferenciações (b).}
     \label{fig:stationary_analysis}
 \end{figure}
+
+De seguida, procedeu-se à restante avaliação da estacionariedade da série, começando por uma inspeção visual (Fig. \ref{fig:stationary_analysis}). Esta análise foi complementada pelas funções de autocorrelação (ACF) e autocorrelação parcial (PACF), que permitem identificar padrões de dependência temporal e indicar a presença de componentes sazonais ou tendências persistentes. Estas ferramentas oferecem uma primeira aproximação ao comportamento estrutural da série, orientando eventuais transformações necessárias para satisfazer os pressupostos dos modelos a aplicar.
+
+
 
 A partir da análise gráfica e das funções ACF e PACF, torna-se evidente que a série original não é estacionária, apresentando tanto sazonalidade, como uma leve tendência. No entanto, após a aplicação de diferenciações de ordem 1 (para remover a tendência) e 12 (para eliminar a componente sazonal), a série transformada revela um comportamento estacionário, com médias e variâncias aproximadamente constantes ao longo do tempo e autocorrelações significativamente reduzidas.
 
@@ -146,17 +148,19 @@ Apesar de o teste de Ljung-Box aplicado aos seus resíduos ter produzido um p-va
 
 \begin{figure}[H]
     \centering
+    \includegraphics[width=1\linewidth]{assets/sarima_fit_qqplot.png}
+    \caption{Gráfico QQ dos resíduos do modelo SARIMA.}
+    \label{fig:arima_3}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
     \includegraphics[width=1\linewidth]{assets/sarima_fit_residuos.png}
     \caption{Análise dos resíduos do modelo SARIMA.}
     \label{fig:arima_2}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\linewidth]{assets/sarima_fit_qqplot.png}
-    \caption{Gráfico QQ dos resíduos do modelo SARIMA.}
-    \label{fig:arima_3}
-\end{figure}
+
 
 Quanto aos restantes pressupostos, através das Fig. \ref{fig:arima_2} e \ref{fig:arima_3}, e dos testes de Shapiro–Wilk e Kolmogorov–Smirnov, foi possível avaliar a normalidade dos resíduos. As visualizações sugerem alguma aproximação à distribuição normal, mas com desvios ligeiros nas caudas. Esta ambiguidade visual reflete-se nos testes formais: o teste de Shapiro–Wilk rejeita a hipótese de normalidade, enquanto o teste de Kolmogorov–Smirnov não apresenta evidência suficiente para a rejeitar. Assim, a normalidade dos resíduos permanece uma questão debatível, com sinais contraditórios entre os métodos utilizados.
 
@@ -188,16 +192,16 @@ Após a decomposição e ajuste do ARIMA residual (selecionado automaticamente v
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/stlm_fit_residuos.png}
-    \caption{Análise dos resíduos do modelo STLM.}
-    \label{fig:stlm_residuals}
+    \includegraphics[width=1\linewidth]{assets/stlm_fit_qqplot.png}
+    \caption{Gráfico QQ dos resíduos do modelo STLM.}
+    \label{fig:stlm_qq}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/stlm_fit_qqplot.png}
-    \caption{Gráfico QQ dos resíduos do modelo STLM.}
-    \label{fig:stlm_qq}
+    \includegraphics[width=1\linewidth]{assets/stlm_fit_residuos.png}
+    \caption{Análise dos resíduos do modelo STLM.}
+    \label{fig:stlm_residuals}
 \end{figure}
 
 Este comportamento globalmente aceitável do modelo inclui, nomeadamente, a normalidade dos resíduos. A análise gráfica (Fig. \ref{fig:stlm_residuals} e \ref{fig:stlm_qq}) revela uma aproximação satisfatória à distribuição normal, sem desvios ou assimetrias relevantes. Esta impressão foi apoiada por testes formais. O teste de Shapiro–Wilk produziu um p-valor de $0.01422$ que, embora sugira rejeição da hipótese de normalidade ao nível de significância de $5\%$, situa-se perto do limiar e pode ser interpretado com cautela, tendo em conta a elevada sensibilidade do teste a pequenas imperfeições. Por outro lado, o teste de Kolmogorov–Smirnov devolveu um p-valor de $0.3263$, não permitindo rejeitar a hipótese de normalidade. Apesar da ligeira inconsistência entre os testes, o comportamento global dos resíduos pode ser considerado compatível com a normalidade, não comprometendo os pressupostos do modelo STLM nem a sua validade inferencial.
